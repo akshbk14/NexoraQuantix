@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="{{ current_lang }}" data-theme="{{ current_theme or 'neon-dark' }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="StockSense — Inventory demand forecasting and smart reordering for retail businesses.">
+  <title>{% block title %}StockSense{% endblock %}</title>
+
+  {# No-flash theme loader — runs before render to prevent flash #}
+  <script src="{{ url_for('static', filename='theme.js') }}"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% block head %}{% endblock %}
+</head>
+
+<body>
+<div class="app-shell">
+
+  {# ─── SIDEBAR ─── #}
+  <aside class="sidebar">
+    <a class="brand" href="{{ url_for('dashboard') }}">
+      <span class="brand-mark">S</span>
+      <span>
+        <strong>StockSense</strong>
+        <small>INVENTORY INTELLIGENCE</small>
+      </span>
+    </a>
+
+    <div class="side-label">WORKSPACE</div>
+
+    <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}"
+       href="{{ url_for('dashboard') }}">
+      <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="7" height="7" rx="1.5" stroke-width="2"/>
+        <rect x="14" y="3" width="7" height="7" rx="1.5" stroke-width="2"/>
+        <rect x="3" y="14" width="7" height="7" rx="1.5" stroke-width="2"/>
+        <rect x="14" y="14" width="7" height="7" rx="1.5" stroke-width="2"/>
+      </svg>
+      {{ t('Overview') }}
+    </a>
+
+    <a class="nav-link {% if request.endpoint == 'sales_page' %}active{% endif %}"
+       href="{{ url_for('sales_page') }}">
+      <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
+      </svg>
+      {{ t('Sales Data') }}
+    </a>
+
+
+
+    <a class="nav-link {% if request.endpoint == 'reorder' %}active{% endif %}"
+       href="{{ url_for('reorder') }}">
+      <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+      </svg>
+      {{ t('Reorder Recommendations') }}
+    </a>
+
+    <a class="nav-link {% if request.endpoint == 'analytics' %}active{% endif %}"
+       href="{{ url_for('analytics') }}">
+      <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>
+      </svg>
+      {{ t('Analytics') }}
+    </a>
+
+    <a class="nav-link {% if request.endpoint == 'scan_page' %}active{% endif %}" href="{{ url_for('scan_page') }}">
+      <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7V5a1 1 0 011-1h2m10 0h2a1 1 0 011 1v2M4 17v2a1 1 0 001 1h2m10 0h2a1 1 0 001-1v-2M8 12h8M12 8v8"/></svg>
+      Scan Products
+    </a>
+
+    <a class="nav-link {% if request.endpoint == 'settings_page' %}active{% endif %}"
+       href="{{ url_for('settings_page') }}">
+      <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+      {{ t('Settings') }}
+    </a>
+
+    <div class="sidebar-spacer"></div>
+
+    <div class="sidebar-bottom">
+      {% if current_user %}
+      <div class="user-card">
+        <div class="user-avatar">{{ (current_user.full_name or 'U')[:1].upper() }}</div>
+        <div style="min-width:0">
+          <div class="user-name">{{ current_user.full_name }}</div>
+          <div class="user-store">{{ current_user.store_name }}</div>
+        </div>
+      </div>
+      {% endif %}
+      <a class="logout-btn" href="{{ url_for('logout') }}">
+        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+        </svg>
+        Sign Out
+      </a>
+    </div>
+  </aside>
+
+  {# ─── MAIN CONTENT ─── #}
+  <main class="main-content">
+
+    {# TOPBAR #}
+    <header class="topbar">
+      <div class="topbar-left">
+        {% block topbar_left %}{% endblock %}
+      </div>
+
+      <div class="topbar-actions">
+        {# Three-theme picker #}
+        <div class="theme-picker" title="Switch theme">
+          <button class="theme-swatch {% if (current_theme or 'neon-dark') == 'neon-dark' %}active{% endif %}"
+                  data-t="neon-dark" onclick="SS.setTheme('neon-dark')"
+                  title="Neon Dark Blue" type="button" aria-label="Neon Dark theme"></button>
+          <button class="theme-swatch {% if current_theme == 'gold' %}active{% endif %}"
+                  data-t="gold" onclick="SS.setTheme('gold')"
+                  title="Black & Gold" type="button" aria-label="Gold theme"></button>
+          <button class="theme-swatch {% if current_theme == 'cream' %}active{% endif %}"
+                  data-t="cream" onclick="SS.setTheme('cream')"
+                  title="Cream & Maroon" type="button" aria-label="Cream theme"></button>
+        </div>
+
+        {# Language selector #}
+        <form method="post" action="{{ url_for('set_language') }}" class="language-form">
+          <label class="language-label">{{ t('Language') }}</label>
+          <select name="lang" onchange="this.form.submit()">
+            <option value="en" {% if current_lang=='en' %}selected{% endif %}>English</option>
+            <option value="ta" {% if current_lang=='ta' %}selected{% endif %}>தமிழ்</option>
+            <option value="hi" {% if current_lang=='hi' %}selected{% endif %}>हिन्दी</option>
+            <option value="ml" {% if current_lang=='ml' %}selected{% endif %}>മലയാളം</option>
+            <option value="te" {% if current_lang=='te' %}selected{% endif %}>తెలుగు</option>
+            <option value="kn" {% if current_lang=='kn' %}selected{% endif %}>ಕನ್ನಡ</option>
+          </select>
+        </form>
+
+        {% block topbar_actions %}{% endblock %}
+      </div>
+    </header>
+
+    {# FLASH MESSAGES #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-stack">
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">
+              {% if category == 'success' %}✓{% elif category == 'error' %}✕{% elif category == 'info' %}ℹ{% else %}⚠{% endif %}
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {# PAGE CONTENT #}
+    {% block content %}{% endblock %}
+
+    {# FOOTER #}
+    <footer class="footer">
+      <span><strong>StockSense</strong> · The Right Stock. At the Right Time.</span>
+      <span>{{ t('Built for Quantix 2K26 · PS11') }} · Team Nexora</span>
+    </footer>
+
+  </main>
+</div>
+
+{% block scripts %}{% endblock %}
+<script src="{{ url_for('static', filename='i18n.js') }}"></script>
+</body>
+</html>

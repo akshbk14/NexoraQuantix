@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}Settings — StockSense{% endblock %}
+
+{% block topbar_left %}
+  <div class="eyebrow"><a href="{{ url_for('dashboard') }}">{{ t('Overview') }}</a> / {{ t('Settings') }}</div>
+  <h1>{{ t('Preferences & Configuration') }}</h1>
+  <p class="subtitle">{{ t('Customize your visual theme, replenish parameters, service levels, and store profile.') }}</p>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex;flex-direction:column;gap:24px;max-width:960px;">
+
+  {# ─── 1. THEME SELECTION ─── #}
+  <div class="panel">
+    <div class="panel-heading">
+      <div>
+        <h2>🎨 {{ t('Visual Design System & Themes') }}</h2>
+        <p>{{ t('Select from three bespoke, meticulously tuned aesthetic themes. Changes take effect instantly.') }}</p>
+      </div>
+      <span class="pill pill-blue">{{ t('Active') }}: <strong style="text-transform:capitalize;margin-left:4px;">{{ current_theme or 'neon-dark' }}</strong></span>
+    </div>
+
+    <form method="post" action="{{ url_for('settings_page') }}" id="themeForm">
+      <input type="hidden" name="action" value="theme">
+      <input type="hidden" name="theme" id="selectedThemeInput" value="{{ current_theme or 'neon-dark' }}">
+
+      <div class="theme-cards">
+
+        {# Theme 1: Neon Dark Blue #}
+        <div class="theme-card tc-nd {% if (current_theme or 'neon-dark') == 'neon-dark' %}active{% endif %}"
+             data-t="neon-dark"
+             onclick="selectThemeCard('neon-dark')">
+          <div class="theme-card-preview">
+            <div class="tc-sidebar"></div>
+            <div class="tc-main">
+              <div class="tc-bar"></div>
+              <div class="tc-card"></div>
+            </div>
+          </div>
+          <div class="theme-card-label">
+            <strong>1. Neon Dark Blue</strong>
+            <small style="display:block;color:var(--ink-3);margin-top:2px;">Midnight blue, cyan highlights, silver glow.</small>
+          </div>
+        </div>
+
+        {# Theme 2: Black & Gold #}
+        <div class="theme-card tc-gd {% if current_theme == 'gold' %}active{% endif %}"
+             data-t="gold"
+             onclick="selectThemeCard('gold')">
+          <div class="theme-card-preview">
+            <div class="tc-sidebar"></div>
+            <div class="tc-main">
+              <div class="tc-bar"></div>
+              <div class="tc-card"></div>
+            </div>
+          </div>
+          <div class="theme-card-label">
+            <strong>2. Black + Gold</strong>
+            <small style="display:block;color:var(--ink-3);margin-top:2px;">Rich charcoal, champagne gold, executive luxury.</small>
+          </div>
+        </div>
+
+        {# Theme 3: Cream & Maroon #}
+        <div class="theme-card tc-cm {% if current_theme == 'cream' %}active{% endif %}"
+             data-t="cream"
+             onclick="selectThemeCard('cream')">
+          <div class="theme-card-preview">
+            <div class="tc-sidebar"></div>
+            <div class="tc-main">
+              <div class="tc-bar"></div>
+              <div class="tc-card"></div>
+            </div>
+          </div>
+          <div class="theme-card-label">
+            <strong>3. Cream + Maroon</strong>
+            <small style="display:block;color:var(--ink-3);margin-top:2px;">Warm ivory, deep burgundy, polished editorial contrast.</small>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="margin-top:18px;display:flex;justify-content:flex-end;">
+        <button type="submit" class="btn btn-primary btn-sm">
+          {{ t('Save Theme as Default') }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  {# ─── 2. REPLENISHMENT & OPTIMIZER SETTINGS ─── #}
+  <div class="panel">
+    <div class="panel-heading">
+      <div>
+        <h2>📐 {{ t('Inventory Replenishment Parameters') }}</h2>
+        <p>{{ t('Global defaults applied to safety stock calculations and budget constraints.') }}</p>
+      </div>
+    </div>
+
+    <form method="post" action="{{ url_for('settings_page') }}">
+      <input type="hidden" name="action" value="planning">
+
+      <div class="settings-grid">
+        <div class="form-group">
+          <label class="field-label" for="service_level">{{ t('Target Cycle Service Level (CSL)') }}</label>
+          <select id="service_level" name="service_level" class="filter-select">
+            <option value="0.90" {% if settings.get('service_level') == '0.9' or settings.get('service_level') == '0.90' %}selected{% endif %}>
+              90% (Z = 1.28) — Lower holding cost
+            </option>
+            <option value="0.95" {% if not settings.get('service_level') or settings.get('service_level') == '0.95' %}selected{% endif %}>
+              95% (Z = 1.645) — Recommended standard
+            </option>
+            <option value="0.98" {% if settings.get('service_level') == '0.98' %}selected{% endif %}>
+              98% (Z = 2.05) — Maximum stockout protection
+            </option>
+          </select>
+          <span class="field-hint">{{ t('Determines statistical safety buffer size against demand uncertainty.') }}</span>
+        </div>
+
+        <div class="form-group">
+          <label class="field-label" for="default_review_period">{{ t('Default Review Period (Days)') }}</label>
+          <input type="number" id="default_review_period" name="default_review_period"
+                 value="{{ settings.get('default_review_period', 7) }}" min="1" max="90" required>
+          <span class="field-hint">{{ t('How frequently store orders are placed (e.g. 7 days for weekly replenishment).') }}</span>
+        </div>
+
+        <div class="form-group full">
+          <label class="field-label" for="budget_limit">{{ t('Reorder Purchase Budget Cap (₹)') }}</label>
+          <input type="number" id="budget_limit" name="budget_limit" step="any"
+                 value="{{ settings.get('budget_limit', '') }}"
+                 placeholder="{{ t('Optional: e.g. 50000 (leave blank for unlimited)') }}">
+          <span class="field-hint">{{ t('When total reorder costs exceed this limit, recommendations are prioritized by critical stockout urgency.') }}</span>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;display:flex;justify-content:flex-end;">
+        <button type="submit" class="btn btn-primary">
+          {{ t('Save Planning Parameters') }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  {# ─── 3. USER PROFILE & STORE DETAILS ─── #}
+  <div class="panel">
+    <div class="panel-heading">
+      <div>
+        <h2>👤 {{ t('Account Profile & Store Details') }}</h2>
+        <p>{{ t('Update your registered identity and merchant store branding.') }}</p>
+      </div>
+    </div>
+
+    <form method="post" action="{{ url_for('settings_page') }}">
+      <input type="hidden" name="action" value="profile">
+
+      <div class="settings-grid">
+        <div class="form-group">
+          <label class="field-label field-required" for="full_name">{{ t('Full Name') }}</label>
+          <input type="text" id="full_name" name="full_name"
+                 value="{{ user.full_name if user else '' }}" required>
+        </div>
+
+        <div class="form-group">
+          <label class="field-label" for="store_name">{{ t('Business / Store Name') }}</label>
+          <input type="text" id="store_name" name="store_name"
+                 value="{{ user.store_name if user else '' }}">
+        </div>
+
+        <div class="form-group full">
+          <label class="field-label" for="email">{{ t('Registered Email Address') }}</label>
+          <input type="email" id="email" value="{{ user.email if user else '' }}" disabled
+                 style="opacity:0.6;cursor:not-allowed;">
+          <span class="field-hint">{{ t('Email cannot be modified directly. Contact administrator if needed.') }}</span>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;display:flex;justify-content:flex-end;">
+        <button type="submit" class="btn btn-primary">
+          {{ t('Update Profile') }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function selectThemeCard(theme) {
+    // 1. Immediately switch theme globally via SS.setTheme
+    if (window.SS && window.SS.setTheme) {
+      window.SS.setTheme(theme);
+    }
+
+    // 2. Update hidden form input
+    document.getElementById('selectedThemeInput').value = theme;
+
+    // 3. Update active card UI
+    document.querySelectorAll('.theme-card').forEach(function(c) {
+      c.classList.toggle('active', c.getAttribute('data-t') === theme);
+    });
+  }
+</script>
+{% endblock %}

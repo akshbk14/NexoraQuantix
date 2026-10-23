@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Demand Forecast — StockSense{% endblock %}
+
+{% block topbar_left %}
+  <div class="eyebrow">DEMAND FORECASTING</div>
+  <h1>Demand Forecast</h1>
+  <p class="subtitle">AI-selected statistical model forecasts for each product across the planning horizon.</p>
+{% endblock %}
+
+{% block content %}
+
+{% if not has_data %}
+<div class="empty-state" style="padding:80px 24px">
+  <div class="empty-icon">📈</div>
+  <h3>No forecast available</h3>
+  <p>Upload sales data and product settings to generate demand forecasts.</p>
+  <a href="{{ url_for('dashboard') }}#data-tools" class="btn btn-primary">↑ Upload Data</a>
+</div>
+
+{% else %}
+
+{# KPI row #}
+<section class="metric-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:24px">
+  <article class="metric-card">
+    <div class="metric-top"><span>Products Forecasted</span><div class="metric-icon icon-blue">📊</div></div>
+    <div class="metric-value kpi-blue">{{ results|length }}</div>
+    <div class="metric-foot">With available sales history</div>
+  </article>
+  <article class="metric-card">
+    <div class="metric-top"><span>Total Forecast Demand</span><div class="metric-icon icon-cyan">↗</div></div>
+    <div class="metric-value" style="font-size:28px">
+      {{ "{:,.0f}".format(results|sum(attribute='forecast_demand')) }}
+    </div>
+    <div class="metric-foot">Units across all planning horizons</div>
+  </article>
+  <article class="metric-card">
+    <div class="metric-top"><span>High Confidence Models</span><div class="metric-icon icon-green">✓</div></div>
+    <div class="metric-value kpi-green">
+      {{ results|selectattr('confidence','equalto','backtested')|list|length }}
+    </div>
+    <div class="metric-foot">Backtested on ≥28 days of data</div>
+  </article>
+</section>
+
+{# Forecast table #}
+<section class="table-panel">
+  <div class="panel-heading" style="padding:22px 24px 0">
+    <div>
+      <h2>Forecast Summary</h2>
+      <p>Model selection uses rolling-origin backtest over the last 14 data points.</p>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>PRODUCT</th>
+          <th>FORECAST DEMAND</th>
+          <th>DAILY AVG</th>
+          <th>LEAD TIME</th>
+          <th>MODEL</th>
+          <th>WAPE</th>
+          <th>MAE</th>
+          <th>CONFIDENCE</th>
+          <th>ANALYSIS</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in results %}
+        <tr>
+          <td>
+            <div class="table-product">
+              <span class="product-avatar av-{{ loop.index0 % 5 }}">{{ item.product_name[:1] }}</span>
+              <span>
+                <strong>{{ item.product_name }}</strong>
+                <small>{{ item.product_id }}</small>
+              </span>
+            </div>
+          </td>
+          <td><strong>{{ "{:,.1f}".format(item.forecast_demand) }}</strong></td>
+          <td style="color:var(--ink-3)">
+            {{ "{:,.2f}".format(item.forecast_demand / ([item.lead_time_days + item.review_period_days, 1]|max)) }}/day
+          </td>
+          <td style="color:var(--ink-3)">{{ item.lead_time_days }}d</td>
+          <td style="font-size:12px;color:var(--ink-3)">
+            {{ item.model|replace('_',' ')|title if item.model else '—' }}
+          </td>
+          <td>
+            {% if item.wape is not none %}
+              <span class="pill {% if item.wape < 20 %}pill-green{% elif item.wape < 40 %}pill-orange{% else %}pill-red{% endif %}">
+                {{ "{:.1f}%".format(item.wape) }}
+              </span>
+            {% else %}—{% endif %}
+          </td>
+          <td style="font-size:13px;color:var(--ink-3)">
+            {{ "{:.2f}".format(item.mae) if item.mae is not none else '—' }}
+          </td>
+          <td>
+            <span class="pill {% if item.confidence == 'backtested' %}pill-green{% else %}pill-orange{% endif %}">
+              {{ item.confidence }}
+            </span>
+          </td>
+          <td>
+            <a class="details-link" href="{{ url_for('detail', pid=item.product_id) }}">
+              Chart ↗
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="table-footer">
+    <span>{{ results|length }} products</span>
+    <span>WAPE = Weighted Absolute Percentage Error · lower is better · backtested on held-out data.</span>
+  </div>
+</section>
+
+<div class="insight-note" style="margin-top:4px">
+  ⚠ Historical backtest metrics are not a guarantee of future forecast accuracy. Low-confidence forecasts (fewer than 7 days of history) use a simple average demand.
+</div>
+
+{% endif %}
+{% endblock %}

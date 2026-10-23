@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="{{ current_lang|default('en') }}" data-theme="neon">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>StockSense – Sign up</title>
+<meta name="description" content="StockSense inventory intelligence">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='auth-reference.css') }}">
+</head>
+<body data-theme="{{ session.get('auth_theme', 'neon') }}">
+<div class="art neon"><svg viewBox="0 0 800 800" preserveAspectRatio="xMidYMid slice"><g fill="none" stroke-width="1.5"><path d="M0 400C150 450 250 620 300 800" stroke="#4d6bff" opacity=".6"/><path d="M0 330C180 400 280 600 380 800" stroke="#7c5cff" opacity=".5"/><path d="M800 360C730 380 690 480 660 620" stroke="#5aa0ff" opacity=".7"/><path d="M800 300C700 340 640 460 620 620" stroke="#7c5cff" opacity=".5"/></g></svg></div>
+<div class="art gold"><svg viewBox="0 0 800 800" preserveAspectRatio="xMidYMid slice"><g fill="none" stroke="#e3b85a"><path d="M0 330C120 380 200 520 240 800" opacity=".7"/><path d="M0 380C140 430 220 560 290 800" opacity=".5"/><path d="M0 450C120 500 180 620 200 800" stroke-width="3" opacity=".8"/><path d="M800 0C760 120 700 240 560 330" opacity=".7"/><path d="M800 60C770 160 710 260 610 340" stroke-width="3" opacity=".8"/><path d="M800 120C780 200 730 280 650 340" opacity=".5"/></g></svg></div>
+<div class="art cream"><svg viewBox="0 0 800 800" preserveAspectRatio="xMidYMid slice"><g fill="#e8a99b" opacity=".75"><path d="M0 0C30-40 30-90 0-130 -30-90 -30-40 0 0Z" transform="translate(70 560) rotate(-8)"/><path d="M0 0C30-40 30-90 0-130 -30-90 -30-40 0 0Z" transform="translate(40 480) rotate(-40) scale(.8)"/><path d="M0 0C30-40 30-90 0-130 -30-90 -30-40 0 0Z" transform="translate(740 560) rotate(8)"/></g><g stroke="#d8917f" fill="none" opacity=".7"><path d="M70 600C80 520 90 440 60 360"/><path d="M740 600C730 520 720 440 760 340"/></g></svg></div>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></symbol>
+<symbol id="i-store" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 7h2M14 7h2M8 11h2M14 11h2M10 21v-4h4v4"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+</defs></svg>
+<main class="card">
+<div class="brand"><div class="logo">S</div><div><b>StockSense</b><small>INVENTORY INTELLIGENCE</small></div></div>
+<section class="view" id="signup">
+<h1>Create your <span>account</span></h1><p class="sub">Set up your workspace in minutes.</p>
+{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}<div class="flash-stack">{% for category, message in messages %}<div class="msg show {{ 'err' if category == 'error' else 'ok' if category == 'success' else '' }}">{{ message }}</div>{% endfor %}</div>{% endif %}{% endwith %}
+<form method="post" action="{{ url_for('signup') }}">
+<div class="f"><svg><use href="#i-user"/></svg><input name="full_name" placeholder="Full name" autocomplete="name" value="{{ form.full_name if form else '' }}" required></div>
+<div class="f"><svg><use href="#i-store"/></svg><input name="store_name" placeholder="Store / business name (optional)" autocomplete="organization" value="{{ form.store_name if form else '' }}"></div>
+<div class="f"><svg><use href="#i-mail"/></svg><input name="email" type="email" placeholder="you@example.com" autocomplete="email" value="{{ form.email if form else '' }}" required></div>
+<div class="f"><svg><use href="#i-lock"/></svg><input id="up-pass" name="password" type="password" placeholder="Create a password" autocomplete="new-password" required><button class="eye" type="button" data-eye="up-pass" aria-label="Show password"><svg><use href="#i-eye"/></svg></button></div>
+<div class="f"><svg><use href="#i-lock"/></svg><input id="up-conf" name="confirm_password" type="password" placeholder="Confirm password" autocomplete="new-password" required><button class="eye" type="button" data-eye="up-conf" aria-label="Show password"><svg><use href="#i-eye"/></svg></button></div>
+<button class="btn" type="submit" style="margin-top:6px">Create Account <svg><use href="#i-arrow"/></svg></button>
+</form><div class="foot"><p>Already have an account?</p><a class="lnk" href="{{ url_for('signin') }}">Sign in here</a></div>
+</section><div class="theme" role="group" aria-label="Theme">Theme
+<button class="t-neon" data-t="neon" aria-label="Neon dark" type="button"></button>
+<button class="t-gold" data-t="gold" aria-label="Gold" type="button"></button>
+<button class="t-cream" data-t="cream" aria-label="Cream" type="button"></button>
+</div>
+<form method="post" action="{{ url_for('set_language') }}" class="auth-language"><label for="auth-lang">Language</label><select id="auth-lang" name="lang" onchange="this.form.submit()"><option value="en" {% if current_lang=='en' %}selected{% endif %}>English</option><option value="ta" {% if current_lang=='ta' %}selected{% endif %}>தமிழ்</option><option value="ml" {% if current_lang=='ml' %}selected{% endif %}>മലയാളം</option><option value="te" {% if current_lang=='te' %}selected{% endif %}>తెలుగు</option><option value="hi" {% if current_lang=='hi' %}selected{% endif %}>हिन्दी</option><option value="kn" {% if current_lang=='kn' %}selected{% endif %}>ಕನ್ನಡ</option></select></form>
+</main>
+<script>
+const saved=(()=>{try{return localStorage.getItem('ss_theme')}catch(e){return null}})();
+function setTheme(t){document.body.dataset.theme=t;try{localStorage.setItem('ss_theme',t)}catch(e){}document.querySelectorAll('[data-t]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.t===t)))}
+document.querySelectorAll('[data-t]').forEach(b=>b.addEventListener('click',()=>setTheme(b.dataset.t)));
+setTheme(saved||document.body.dataset.theme||'neon');
+document.querySelectorAll('[data-eye]').forEach(b=>b.addEventListener('click',()=>{const i=document.getElementById(b.dataset.eye);i.type=i.type==='password'?'text':'password'}));
+</script>
+<script src="{{ url_for('static', filename='i18n.js') }}"></script>
+</body></html>

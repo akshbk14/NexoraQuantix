@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="{{ current_lang }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StockSense | {{ t('INVENTORY INTELLIGENCE') }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <a class="brand" href="{{ url_for('index') }}">
+      <span class="brand-mark">S</span>
+      <span>
+        <strong>StockSense</strong>
+        <small>{{ t('INVENTORY INTELLIGENCE') }}</small>
+      </span>
+    </a>
+
+    <div class="side-label">{{ t('WORKSPACE') }}</div>
+
+    <a class="nav-link active" href="{{ url_for('index') }}">
+      <span>▦</span> {{ t('Overview') }}
+    </a>
+
+    <a class="nav-link" href="#reorders">
+      <span>↗</span> {{ t('Reorder planner') }}
+    </a>
+
+    <a class="nav-link" href="#data-tools">
+      <span>⇧</span> {{ t('Data management') }}
+    </a>
+
+    <div class="sidebar-bottom">
+      <div class="status-dot"></div>
+      <div>
+        <strong>{{ t('Local workspace') }}</strong>
+        <small>{{ t('Data stays on this device') }}</small>
+      </div>
+    </div>
+  </aside>
+
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- HEADER -->
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">
+          {{ t('INVENTORY OPERATIONS / OVERVIEW') }}
+        </div>
+
+        <h1>{{ t('Inventory overview') }}</h1>
+
+        <p class="subtitle">
+          {{ t('Turn sales history into clearer replenishment decisions.') }}
+        </p>
+      </div>
+
+      <div class="top-actions">
+
+        <!-- LANGUAGE SELECTOR -->
+        <form method="post"
+              action="{{ url_for('set_language') }}"
+              class="language-form">
+
+          <input type="hidden" name="next" value="index">
+
+          <label for="language-select" class="language-label">
+            {{ t('Language') }}
+          </label>
+
+          <select id="language-select"
+                  name="lang"
+                  onchange="this.form.submit()">
+
+            <option value="en"
+              {% if current_lang == 'en' %}selected{% endif %}>
+              English
+            </option>
+
+            <option value="ta"
+              {% if current_lang == 'ta' %}selected{% endif %}>
+              தமிழ்
+            </option>
+
+            <option value="hi"
+              {% if current_lang == 'hi' %}selected{% endif %}>
+              हिन्दी
+            </option>
+
+            <option value="ml"
+              {% if current_lang == 'ml' %}selected{% endif %}>
+              മലയാളം
+            </option>
+
+            <option value="te"
+              {% if current_lang == 'te' %}selected{% endif %}>
+              తెలుగు
+            </option>
+
+            <option value="kn"
+              {% if current_lang == 'kn' %}selected{% endif %}>
+              ಕನ್ನಡ
+            </option>
+
+          </select>
+        </form>
+
+        <span class="live-pill">
+          <i></i> {{ t('Local analytics') }}
+        </span>
+
+        <form method="post" class="inline-form">
+          <input type="hidden" name="action" value="demo">
+
+          <button class="btn btn-primary" type="submit">
+            ↻ {{ t('Load demo data') }}
+          </button>
+        </form>
+
+      </div>
+    </header>
+
+
+    <!-- FLASH MESSAGES -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-stack">
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+
+    <!-- WELCOME PANEL -->
+    {% if not has_data %}
+
+      <section class="welcome-panel">
+
+        <div class="welcome-copy">
+
+          <span class="pill pill-blue">
+            {{ t('GET STARTED') }}
+          </span>
+
+          <h2>
+            {{ t('Your inventory decisions,') }}<br>
+            {{ t('backed by data.') }}
+          </h2>
+
+          <p>
+            {{ t('Load the included synthetic demo data to explore demand forecasts, stock risk, shelf-life-aware recommendations and reorder costs.') }}
+          </p>
+
+          <form method="post">
+            <input type="hidden" name="action" value="demo">
+
+            <button class="btn btn-primary btn-large" type="submit">
+              {{ t('Load demo workspace') }} <span>→</span>
+            </button>
+          </form>
+
+          <small class="muted">
+            {{ t('Demo values are synthetic and intended for demonstration only.') }}
+          </small>
+
+        </div>
+
+        <div class="welcome-visual" aria-hidden="true">
+
+          <div class="orbit orbit-one"></div>
+          <div class="orbit orbit-two"></div>
+
+          <div class="visual-card">
+            <span class="mini-label">{{ t('DEMAND SIGNAL') }}</span>
+
+            <strong>+18.6%</strong>
+
+            <span class="trend-up">
+              ↗ {{ t('Forecast movement') }}
+            </span>
+
+            <div class="sparkline">
+              <b style="height:30%"></b>
+              <b style="height:44%"></b>
+              <b style="height:36%"></b>
+              <b style="height:58%"></b>
+              <b style="height:49%"></b>
+              <b style="height:76%"></b>
+              <b style="height:64%"></b>
+              <b style="height:91%"></b>
+              <b style="height:83%"></b>
+            </div>
+          </div>
+
+          <div class="floating-chip">
+            ✦ {{ t('Explainable recommendations') }}
+          </div>
+
+        </div>
+      </section>
+
+
+    {% else %}
+
+
+      <!-- METRIC CARDS -->
+      <section class="metric-grid">
+
+        <article class="metric-card">
+          <div class="metric-top">
+            <span>{{ t('Products monitored') }}</span>
+            <span class="metric-icon blue">▦</span>
+          </div>
+
+          <div class="metric-value">{{ products|length }}</div>
+
+          <div class="metric-foot">
+            {{ t('Across active inventory') }}
+          </div>
+        </article>
+
+
+        <article class="metric-card">
+          <div class="metric-top">
+            <span>{{ t('Products at risk') }}</span>
+            <span class="metric-icon orange">⚑</span>
+          </div>
+
+          <div class="metric-value">
+            {{ kpis.products_at_risk }}
+          </div>
+
+          <div class="metric-foot">
+            <span class="dot-orange"></span>
+            {{ t('Critical or high priority') }}
+          </div>
+        </article>
+
+
+        <article class="metric-card">
+          <div class="metric-top">
+            <span>{{ t('Units to reorder') }}</span>
+            <span class="metric-icon blue">↗</span>
+          </div>
+
+          <div class="metric-value">
+            {{ "{:,.0f}".format(kpis.total_order_units) }}
+          </div>
+
+          <div class="metric-foot">
+            {{ t('After budget prioritization') }}
+          </div>
+        </article>
+
+
+        <article class="metric-card">
+          <div class="metric-top">
+            <span>{{ t('Estimated order cost') }}</span>
+            <span class="metric-icon green">₹</span>
+          </div>
+
+          <div class="metric-value">
+            ₹{{ "{:,.0f}".format(kpis.estimated_order_cost) }}
+          </div>
+
+          <div class="metric-foot">
+            {{ t('Estimated from unit costs') }}
+          </div>
+        </article>
+
+      </section>
+
+
+      <!-- CHARTS AND INSIGHTS -->
+      <section class="content-grid">
+
+        <!-- REPLENISHMENT PRIORITIES -->
+        <article class="panel chart-panel">
+
+          <div class="panel-heading">
+            <div>
+              <h2>{{ t('Replenishment priorities') }}</h2>
+
+              <p>
+                {{ t('Products ranked by urgency and estimated risk') }}
+              </p>
+            </div>
+
+            <span class="insight-icon">↗</span>
+          </div>
+
+          <div class="priority-bars">
+
+            {% for item in results[:7] %}
+
+              <div class="priority-row">
+
+                <div class="priority-name">
+                  <span class="product-avatar avatar-{{ loop.index0 % 5 }}">
+                    {{ item.product_name[:1] }}
+                  </span>
+
+                  <span>{{ item.product_name }}</span>
+                </div>
+
+                <div class="bar-track">
+                  <div
+                    class="bar-fill bar-{{ item.priority|lower }}"
+                    {{ ('style="width: %s%%"'|format([item.recommended_order * 100 / ([results|map(attribute='recommended_order')|max, 1]|max), 100]|min))|safe }}>
+                  </div>
+                </div>
+
+                <span class="bar-number">
+                  {{ item.recommended_order }} {{ t('units') }}
+                </span>
+
+              </div>
+
+            {% endfor %}
+
+          </div>
+
+          <div class="chart-legend">
+            <span>
+              <i class="legend-critical"></i>
+              {{ t('Critical') }}
+            </span>
+
+            <span>
+              <i class="legend-high"></i>
+              {{ t('High') }}
+            </span>
+
+            <span>
+              <i class="legend-normal"></i>
+              {{ t('Other priorities') }}
+            </span>
+          </div>
+
+        </article>
+
+
+        <!-- DECISION INSIGHTS -->
+        <article class="panel insight-panel">
+
+          <div class="panel-heading">
+            <div>
+              <h2>{{ t('Decision insights') }}</h2>
+              <p>{{ t('What the current plan indicates') }}</p>
+            </div>
+
+            <span class="insight-icon">✦</span>
+          </div>
+
+
+          <div class="insight-item">
+            <span class="insight-symbol orange-bg">!</span>
+
+            <div>
+              <strong>
+                {{ results|selectattr('priority','equalto','Critical')|list|length }}
+                {{ t('critical priorities') }}
+              </strong>
+
+              <p>
+                {{ t('Review the most urgent products first to reduce stockout risk.') }}
+              </p>
+            </div>
+          </div>
+
+
+          <div class="insight-item">
+            <span class="insight-symbol blue-bg">↗</span>
+
+            <div>
+              <strong>{{ t('Lead-time-aware planning') }}</strong>
+
+              <p>
+                {{ t('Forecast demand is considered across supplier lead time and review period.') }}
+              </p>
+            </div>
+          </div>
+
+
+          <div class="insight-item">
+            <span class="insight-symbol green-bg">✓</span>
+
+            <div>
+              <strong>{{ t('Shelf-life guardrails') }}</strong>
+
+              <p>
+                {{ t('Perishable products are checked against a demand-based order cap.') }}
+              </p>
+            </div>
+          </div>
+
+
+          <div class="insight-note">
+            {{ t('Forecast quality depends on data history. Review low-confidence warnings before acting.') }}
+          </div>
+
+        </article>
+
+      </section>
+
+
+      <!-- REORDER TABLE -->
+      <section class="panel table-panel" id="reorders">
+
+        <div class="panel-heading table-heading">
+
+          <div>
+            <h2>{{ t('Smart reorder recommendations') }}</h2>
+
+            <p>
+              {{ t('Recommended actions generated from sales history and product settings') }}
+            </p>
+          </div>
+
+          <a class="btn btn-outline" href="{{ url_for('download') }}">
+            ↓ {{ t('Export CSV') }}
+          </a>
+
+        </div>
+
+
+        <div class="table-wrap">
+
+          <table>
+
+            <thead>
+              <tr>
+                <th>{{ t('PRODUCT') }}</th>
+                <th>{{ t('PRIORITY') }}</th>
+                <th>{{ t('IN STOCK') }}</th>
+                <th>{{ t('FORECAST DEMAND') }}</th>
+                <th>{{ t('LEAD TIME') }}</th>
+                <th>{{ t('REORDER QTY') }}</th>
+                <th>{{ t('EST. COST') }}</th>
+                <th>{{ t('DETAILS') }}</th>
+              </tr>
+            </thead>
+
+
+            <tbody>
+
+              {% for item in results %}
+
+                <tr>
+
+                  <td>
+                    <div class="table-product">
+
+                      <span class="product-avatar avatar-{{ loop.index0 % 5 }}">
+                        {{ item.product_name[:1] }}
+                      </span>
+
+                      <span>
+                        <strong>{{ item.product_name }}</strong>
+                        <small>{{ item.product_id }}</small>
+                      </span>
+
+                    </div>
+                  </td>
+
+
+                  <td>
+                    <span class="priority-badge {{ item.priority|lower }}">
+                      {{ t(item.priority) }}
+                    </span>
+                  </td>
+
+
+                  <td>
+                    {{ "{:,.0f}".format(item.current_stock) }}
+                  </td>
+
+
+                  <td>
+                    {{ "{:,.1f}".format(item.forecast_demand) }}
+                  </td>
+
+
+                  <td>
+                    {{ item.lead_time_days }} {{ t('days') }}
+                  </td>
+
+
+                  <td>
+                    <strong class="order-number">
+                      {{ item.recommended_order }}
+                    </strong>
+                  </td>
+
+
+                  <td>
+                    ₹{{ "{:,.0f}".format(item.estimated_order_cost) }}
+                  </td>
+
+
+                  <td>
+                    <a class="details-link"
+                       href="{{ url_for('detail', pid=item.product_id) }}">
+                      {{ t('Analyze') }} ↗
+                    </a>
+                  </td>
+
+                </tr>
+
+              {% endfor %}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+
+        <div class="table-footer">
+          <span>
+            {{ t('Showing') }} {{ results|length }} {{ t('products') }}
+          </span>
+
+          <span>
+            {{ t('Recommendations are decision support, not automatic purchase orders.') }}
+          </span>
+        </div>
+
+      </section>
+
+    {% endif %}
+
+
+    <!-- Data import and planning controls are managed from dedicated pages. -->
+
+    <!-- FOOTER -->
+    <footer class="footer">
+
+      <span>
+        <strong>StockSense</strong> ·
+        {{ t('Inventory intelligence for better decisions') }}
+      </span>
+
+      <span>{{ t('Built for Quantix 2K26 · PS11') }}</span>
+
+    </footer>
+
+  </main>
+</div>
+</body>
+</html>

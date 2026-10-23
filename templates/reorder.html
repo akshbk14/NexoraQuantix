@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}Reorder Recommendations — StockSense{% endblock %}
+
+{% block topbar_left %}
+  <div class="eyebrow"><a href="{{ url_for('dashboard') }}">{{ t('Overview') }}</a> / {{ t('Reorder Recommendations') }}</div>
+  <h1>{{ t('Smart Replenishment Planner') }}</h1>
+  <p class="subtitle">{{ t('Automated purchase orders balancing service levels, lead times, shelf life, and budget constraints.') }}</p>
+{% endblock %}
+
+{% block topbar_actions %}
+  {% if has_data %}
+    <a href="{{ url_for('download') }}" class="btn btn-outline">
+      <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+      </svg>
+      {{ t('Export Purchase Order (CSV)') }}
+    </a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+{% if not has_data %}
+  <div class="panel empty-state">
+    <div class="empty-icon">📦</div>
+    <h3>{{ t('No Reorder Recommendations Yet') }}</h3>
+    <p>{{ t('Upload your historical sales data and configure product settings to generate automated reorder plans.') }}</p>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-primary">{{ t('Go to Dashboard & Upload') }}</a>
+  </div>
+{% else %}
+
+  {# KPI Cards #}
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="metric-top">
+        <span>{{ t('Total Reorder Cost') }}</span>
+        <div class="metric-icon icon-blue">₹</div>
+      </div>
+      <div class="metric-value kpi-accent">₹{{ "{:,.0f}".format(kpis.total_reorder_cost) }}</div>
+      <div class="metric-foot">
+        {% if kpis.budget_limit %}
+          {{ t('Budget limit') }}: ₹{{ "{:,.0f}".format(kpis.budget_limit) }}
+        {% else %}
+          {{ t('No budget constraint set') }}
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-top">
+        <span>{{ t('Products to Reorder') }}</span>
+        <div class="metric-icon icon-orange">⚡</div>
+      </div>
+      <div class="metric-value {% if kpis.products_to_reorder > 0 %}kpi-critical{% else %}kpi-green{% endif %}">
+        {{ kpis.products_to_reorder }}
+      </div>
+      <div class="metric-foot">{{ t('of') }} {{ results|length }} {{ t('active catalog items') }}</div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-top">
+        <span>{{ t('Critical Priority') }}</span>
+        <div class="metric-icon icon-red">🚨</div>
+      </div>
+      <div class="metric-value kpi-critical">{{ kpis.critical_count }}</div>
+      <div class="metric-foot">{{ t('Stockout expected within lead time') }}</div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-top">
+        <span>{{ t('Profit at Risk') }}</span>
+        <div class="metric-icon icon-purple">🛡️</div>
+      </div>
+      <div class="metric-value">₹{{ "{:,.0f}".format(kpis.total_profit_at_risk) }}</div>
+      <div class="metric-foot">{{ t('Potential lost gross margin') }}</div>
+    </div>
+  </div>
+
+  {# Budget Warning Banner if items were deferred #}
+  {% set deferred_items = results | selectattr('deferred_over_budget', 'defined') | selectattr('deferred_over_budget') | list %}
+  {% if deferred_items %}
+    <div class="flash warning" style="margin-bottom:20px;">
+      ⚠️ <strong>{{ t('Budget Cap Reached') }}:</strong>
+      {{ deferred_items|length }} {{ t('lower-priority item(s) were deferred to respect your ₹{:,.0f} budget limit.'.format(kpis.budget_limit)) }}
+    </div>
+  {% endif %}
+
+  {# Filter and Search Bar #}
+  <div class="search-bar">
+    <div class="search-input-wrap">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+      </svg>
+      <input type="search" id="reorderSearch" placeholder="{{ t('Search product name or ID...') }}" oninput="filterReorders()">
+    </div>
+
+    <select id="priorityFilter" class="filter-select" onchange="filterReorders()">
+      <option value="ALL">{{ t('All Priorities') }}</option>
+      <option value="CRITICAL">{{ t('Critical') }}</option>
+      <option value="HIGH">{{ t('High') }}</option>
+      <option value="MEDIUM">{{ t('Medium') }}</option>
+      <option value="LOW">{{ t('Low') }}</option>
+    </select>
+
+    <select id="orderOnlyFilter" class="filter-select" onchange="filterReorders()">
+      <option value="ALL">{{ t('All Items') }}</option>
+      <option value="ORDER_ONLY" selected>{{ t('Reorder Required Only') }} (> 0)</option>
+    </select>
+  </div>
+
+  {# Reorder Table #}
+  <div class="table-panel">
+    <div class="panel-heading">
+      <div>
+        <h2>{{ t('Actionable Replenishment Schedule') }}</h2>
+        <p>{{ t('Target stock incorporates forecast demand, safety buffer, supplier lead time, review frequency, and shelf-life caps.') }}</p>
+      </div>
+      <span class="badge medium" id="visibleRowCount">{{ results|length }} {{ t('items') }}</span>
+    </div>
+
+    <div class="table-wrap">
+      <table id="reorderTable">
+        <thead>
+          <tr>
+            <th>{{ t('Product') }}</th>
+            <th>{{ t('Current Stock') }}</th>
+            <th>{{ t('Incoming') }}</th>
+            <th>{{ t('Target Stock') }}</th>
+            <th>{{ t('Lead Time') }}</th>
+            <th>{{ t('Forecast Demand') }}</th>
+            <th>{{ t('Recommended Order') }}</th>
+            <th>{{ t('Priority') }}</th>
+            <th>{{ t('Est. Cost') }}</th>
+            <th>{{ t('Risk / Notes') }}</th>
+            <th>{{ t('Analysis') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in results %}
+            <tr class="reorder-row"
+                data-name="{{ r.product_name|lower }} {{ r.product_id|lower }}"
+                data-priority="{{ r.priority|upper }}"
+                data-qty="{{ r.recommended_order }}">
+              <td>
+                <div class="table-product">
+                  <div class="product-avatar av-{{ loop.index0 % 5 }}">
+                    {{ r.product_name[:2].upper() }}
+                  </div>
+                  <div>
+                    <strong>{{ r.product_name }}</strong>
+                    <small>ID: {{ r.product_id }}</small>
+                  </div>
+                </div>
+              </td>
+              <td><strong>{{ "{:,.1f}".format(r.current_stock) }}</strong></td>
+              <td>{{ "{:,.1f}".format(r.incoming_stock) }}</td>
+              <td>{{ "{:,.1f}".format(r.target_stock) }}</td>
+              <td>{{ r.lead_time_days }} {{ t('days') }}</td>
+              <td>{{ "{:,.1f}".format(r.forecast_demand) }}</td>
+              <td>
+                <span class="order-qty {% if r.recommended_order > 0 %}kpi-accent{% endif %}">
+                  {{ "{:,.0f}".format(r.recommended_order) }}
+                </span>
+                {% if r.pack_size and r.pack_size > 1 %}
+                  <small style="display:block;font-size:10.5px;color:var(--ink-3)">
+                    ({{ (r.recommended_order / r.pack_size)|round|int }} pk × {{ r.pack_size }})
+                  </small>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge {{ r.priority|lower }}">
+                  {{ r.priority }}
+                </span>
+              </td>
+              <td>
+                {% if r.estimated_order_cost > 0 %}
+                  ₹{{ "{:,.0f}".format(r.estimated_order_cost) }}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td style="max-width:240px;white-space:normal;">
+                {% if r.warning %}
+                  <span class="pill pill-orange" style="font-size:11px;line-height:1.3;margin-bottom:3px;display:inline-block;">
+                    ⚠️ {{ r.warning }}
+                  </span>
+                {% endif %}
+                <small style="display:block;color:var(--ink-3);font-size:11.5px;line-height:1.35;">
+                  {{ r.explanation }}
+                </small>
+              </td>
+              <td>
+                <a class="details-link" href="{{ url_for('detail', pid=r.product_id) }}">
+                  {{ t('Analyze') }} →
+                </a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-footer">
+      <span>{{ t('Showing calculated replenishment schedule for all catalog SKUs') }}</span>
+      <a href="{{ url_for('download') }}" class="btn btn-outline btn-sm">
+        {{ t('Download CSV') }}
+      </a>
+    </div>
+  </div>
+
+  {# Mathematical Formulation Reference Card #}
+  <div class="panel" style="margin-top:20px;">
+    <h3>📐 {{ t('Inventory Optimization Methodology') }}</h3>
+    <p style="font-size:13.5px;color:var(--ink-2);margin-top:8px;line-height:1.7;">
+      StockSense applies a non-stationary (s, S) periodic review policy calibrated for retail operations:
+    </p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:14px;margin-top:14px;">
+      <div style="background:var(--bg-2);padding:14px;border-radius:10px;">
+        <strong style="color:var(--accent);font-size:13px;display:block;margin-bottom:4px;">1. Lead-Time Demand (LTD)</strong>
+        <code style="font-size:12px;color:var(--ink);">LTD = μ_daily × Lead Time</code>
+        <p style="font-size:11.5px;color:var(--ink-3);margin-top:4px;">Expected cumulative consumption during supplier replenishment delay.</p>
+      </div>
+
+      <div style="background:var(--bg-2);padding:14px;border-radius:10px;">
+        <strong style="color:var(--accent);font-size:13px;display:block;margin-bottom:4px;">2. Safety Stock (SS)</strong>
+        <code style="font-size:12px;color:var(--ink);">SS = Z_α × σ_daily × √(Lead Time + Review Period)</code>
+        <p style="font-size:11.5px;color:var(--ink-3);margin-top:4px;">Buffers demand uncertainty up to the chosen service level (e.g. 95% = 1.645).</p>
+      </div>
+
+      <div style="background:var(--bg-2);padding:14px;border-radius:10px;">
+        <strong style="color:var(--accent);font-size:13px;display:block;margin-bottom:4px;">3. Target Stock & Order Qty</strong>
+        <code style="font-size:12px;color:var(--ink);">Target = LTD + (μ × Review) + SS</code>
+        <code style="font-size:12px;color:var(--ink);display:block;margin-top:2px;">Order = max(0, min(Target - Usable - Incoming, ShelfLifeCap))</code>
+        <p style="font-size:11.5px;color:var(--ink-3);margin-top:4px;">Caps orders against perishable batch life and rounds up to vendor pack size.</p>
+      </div>
+    </div>
+  </div>
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function filterReorders() {
+    var searchVal = (document.getElementById('reorderSearch').value || '').toLowerCase().trim();
+    var priorityVal = (document.getElementById('priorityFilter').value || 'ALL');
+    var orderOnly = document.getElementById('orderOnlyFilter').value === 'ORDER_ONLY';
+
+    var rows = document.querySelectorAll('.reorder-row');
+    var visibleCount = 0;
+
+    rows.forEach(function(row) {
+      var name = row.getAttribute('data-name');
+      var priority = row.getAttribute('data-priority');
+      var qty = parseFloat(row.getAttribute('data-qty') || 0);
+
+      var matchSearch = !searchVal || name.indexOf(searchVal) !== -1;
+      var matchPriority = priorityVal === 'ALL' || priority === priorityVal;
+      var matchOrder = !orderOnly || qty > 0;
+
+      if (matchSearch && matchPriority && matchOrder) {
+        row.style.display = '';
+        visibleCount++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    var badge = document.getElementById('visibleRowCount');
+    if (badge) badge.textContent = visibleCount + ' items';
+  }
+
+  // Initial filter run
+  document.addEventListener('DOMContentLoaded', filterReorders);
+</script>
+{% endblock %}

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>StockSense – Sign in</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{font-family:Manrope,system-ui,sans-serif;color:var(--text);background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px 16px;min-height:100%;overflow-x:hidden;position:relative;transition:background .4s}
+body[data-theme=neon]{--bg:radial-gradient(ellipse at 15% 85%,#3a1fd1 0,transparent 45%),radial-gradient(ellipse at 90% 40%,#1d3fb8 0,transparent 40%),#070a3a;--card:rgba(18,20,80,.55);--cb:#5b4bff;--glow:0 0 28px rgba(91,75,255,.45),inset 0 0 18px rgba(91,75,255,.15);--text:#fff;--muted:#c9ccf5;--field:rgba(10,12,50,.7);--fb:#2e3380;--ph:#9a9fd6;--acc:#7c5cff;--link:#4da3ff;--btn:linear-gradient(90deg,#6a4cff,#3b82f6);--bt:#fff;--logo:linear-gradient(135deg,#6a4cff,#3b82f6);--cardfilter:blur(14px)}
+body[data-theme=gold]{--bg:radial-gradient(ellipse at 5% 70%,#6b4a12 0,transparent 40%),radial-gradient(ellipse at 100% 10%,#7a5517 0,transparent 35%),#050403;--card:rgba(12,10,7,.78);--cb:#b8892e;--glow:0 0 22px rgba(217,169,60,.25);--text:#fff;--muted:#e8e0cc;--field:rgba(25,21,14,.9);--fb:#3b3220;--ph:#a39877;--acc:#e0b44a;--link:#e0b44a;--btn:linear-gradient(90deg,#e3c068,#c39a3c);--bt:#17120a;--logo:linear-gradient(135deg,#d9b45a,#8d6a1e);--cardfilter:blur(10px)}
+body[data-theme=cream]{--bg:radial-gradient(ellipse at 50% 0,#fff4ec 0,transparent 60%),#f9e3d8;--card:#fdf4ee;--cb:transparent;--glow:0 18px 50px rgba(150,90,70,.18);--text:#17110f;--muted:#2b2220;--field:#fffaf6;--fb:#f0e2d9;--ph:#9a8a82;--acc:#8b1a3a;--link:#b0243f;--btn:linear-gradient(90deg,#8e1b3d,#5f0f27);--bt:#fff;--logo:linear-gradient(135deg,#8e1b3d,#5f0f27);--cardfilter:none}
+.art{position:fixed;inset:0;pointer-events:none;z-index:0;display:none}
+body[data-theme=neon] .art.neon,body[data-theme=gold] .art.gold,body[data-theme=cream] .art.cream{display:block}
+.art svg{width:100%;height:100%}
+.card{position:relative;z-index:1;width:100%;max-width:420px;padding:28px 26px 22px;border-radius:22px;background:var(--card);border:1.5px solid var(--cb);box-shadow:var(--glow);backdrop-filter:var(--cardfilter);-webkit-backdrop-filter:var(--cardfilter)}
+.brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:18px}
+.logo{width:44px;height:44px;border-radius:12px;background:var(--logo);display:grid;place-items:center;color:#fff;font-weight:800;font-size:24px}
+body[data-theme=gold] .logo{color:#1a1308}
+.brand b{display:block;font-size:20px;font-weight:700;line-height:1.1}
+.brand small{display:block;font-size:6.5px;letter-spacing:.14em;color:var(--muted);opacity:.8;margin-top:3px}
+h1{margin:0 0 6px;text-align:center;font-size:30px;font-weight:800;letter-spacing:-.01em}
+h1 span{color:var(--acc)}
+.sub{margin:0 0 20px;text-align:center;font-size:14.5px;color:var(--muted)}
+.f{display:flex;align-items:center;gap:12px;height:48px;padding:0 14px;margin-bottom:12px;background:var(--field);border:1px solid var(--fb);border-radius:10px;transition:border-color .2s,box-shadow .2s}
+.f:focus-within{border-color:var(--link);box-shadow:0 0 0 3px color-mix(in srgb,var(--link) 25%,transparent)}
+.f svg{width:20px;height:20px;flex:none;stroke:var(--text);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+.f input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--text);font:500 14.5px Manrope,sans-serif}
+.f input::placeholder{color:var(--ph)}
+.eye{background:none;border:0;padding:0;cursor:pointer;display:grid;place-items:center}
+.row{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin:4px 0 16px}
+.row label{display:flex;align-items:center;gap:8px;cursor:pointer}
+.row input{appearance:none;width:18px;height:18px;margin:0;border:2px solid var(--link);border-radius:4px;background:none;display:grid;place-items:center}
+.row input:checked{background:var(--link)}
+.row input:checked::after{content:"";width:5px;height:9px;border:solid var(--bt);border-width:0 2px 2px 0;transform:rotate(45deg) translate(-1px,-1px)}
+a,.lnk{color:var(--link);text-decoration:none;font-weight:600;cursor:pointer;background:none;border:0;padding:0;font:inherit;font-weight:600}
+.lnk:hover,a:hover{text-decoration:underline}
+.btn{width:100%;height:50px;border:0;border-radius:11px;background:var(--btn);color:var(--bt);font:700 15.5px Manrope,sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 22px -8px var(--link);transition:transform .15s,filter .15s}
+.btn:hover{filter:brightness(1.08)}.btn:active{transform:scale(.99)}
+.btn:disabled{opacity:.6;cursor:wait}
+.btn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.msg{min-height:0;margin:0 0 12px;padding:0;font-size:13px;border-radius:8px}
+.msg.show{padding:9px 12px}
+.msg.err{background:rgba(220,60,80,.14);color:#ff8a98;border:1px solid rgba(220,60,80,.4)}
+body[data-theme=cream] .msg.err{color:#a3162f}
+.msg.ok{background:rgba(60,190,120,.14);color:#5fe0a0;border:1px solid rgba(60,190,120,.4)}
+body[data-theme=cream] .msg.ok{color:#17703f}
+.foot{text-align:center;font-size:13.5px;margin-top:18px;padding-top:14px;border-top:1px solid var(--fb)}
+.foot p{margin:0 0 6px}
+.theme{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:20px;font-size:13px}
+.theme button{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;outline-offset:3px}
+.theme button[aria-pressed=true]{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--text)}
+.t-neon{background:radial-gradient(circle at 35% 30%,#8f7bff,#4a5bff)}.t-gold{background:radial-gradient(circle at 35% 30%,#d9b45a,#8d6a1e)}.t-cream{background:radial-gradient(circle at 35% 30%,#f9d9cf,#efb9ad)}
+.view[hidden]{display:none}
+.home{text-align:center}.home p{color:var(--muted)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body data-theme="neon">
+
+<div class="art neon"><svg viewBox="0 0 800 800" preserveAspectRatio="xMidYMid slice"><g fill="none" stroke-width="1.5"><path d="M0 400C150 450 250 620 300 800" stroke="#4d6bff" opacity=".6"/><path d="M0 330C180 400 280 600 380 800" stroke="#7c5cff" opacity=".5"/><path d="M800 360C730 380 690 480 660 620" stroke="#5aa0ff" opacity=".7"/><path d="M800 300C700 340 640 460 620 620" stroke="#7c5cff" opacity=".5"/></g></svg></div>
+<div class="art gold"><svg viewBox="0 0 800 800" preserveAspectRatio="xMidYMid slice"><g fill="none" stroke="#e3b85a"><path d="M0 330C120 380 200 520 240 800" opacity=".7"/><path d="M0 380C140 430 220 560 290 800" opacity=".5"/><path d="M0 450C120 500 180 620 200 800" stroke-width="3" opacity=".8"/><path d="M800 0C760 120 700 240 560 330" opacity=".7"/><path d="M800 60C770 160 710 260 610 340" stroke-width="3" opacity=".8"/><path d="M800 120C780 200 730 280 650 340" opacity=".5"/></g></svg></div>
+<div class="art cream"><svg viewBox="0 0 800 800" preserveAspectRatio="xMidYMid slice"><g fill="#e8a99b" opacity=".75"><g id="lf"><path d="M0 0C30-40 30-90 0-130 -30-90 -30-40 0 0Z"/></g></g>
+<g fill="#e8a99b" opacity=".7"><use href="#lf" transform="translate(70 560) rotate(-8)"/><use href="#lf" transform="translate(40 480) rotate(-40) scale(.8)"/><use href="#lf" transform="translate(90 440) rotate(15) scale(.9)"/><use href="#lf" transform="translate(50 380) rotate(-25) scale(.8)"/><use href="#lf" transform="translate(740 560) rotate(8)"/><use href="#lf" transform="translate(770 470) rotate(38) scale(.8)"/><use href="#lf" transform="translate(710 430) rotate(-15) scale(.9)"/><use href="#lf" transform="translate(760 360) rotate(25) scale(.8)"/></g>
+<g stroke="#d8917f" fill="none" opacity=".7"><path d="M70 600C80 520 90 440 60 360"/><path d="M740 600C730 520 720 440 760 340"/></g></svg></div>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></symbol>
+<symbol id="i-store" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 7h2M14 7h2M8 11h2M14 11h2M10 21v-4h4v4"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+</defs></svg>
+
+<main class="card">
+  <div class="brand"><div class="logo">S</div><div><b>StockSense</b><small>INVENTORY INTELLIGENCE</small></div></div>
+
+  <!-- SIGN IN -->
+  <section class="view" id="signin">
+    <h1>Welcome <span>back</span></h1>
+    <p class="sub">Sign in to your account.</p>
+    <div class="msg" id="m-in" role="alert"></div>
+    <div class="f"><svg><use href="#i-mail"/></svg><input id="in-email" type="email" placeholder="you@example.com" autocomplete="email"></div>
+    <div class="f"><svg><use href="#i-lock"/></svg><input id="in-pass" type="password" placeholder="Your password" autocomplete="current-password"><button class="eye" type="button" data-eye="in-pass" aria-label="Show password"><svg><use href="#i-eye"/></svg></button></div>
+    <div class="row"><label><input type="checkbox" id="in-rem"> Remember me</label><a id="forgot">Forgot password?</a></div>
+    <button class="btn" id="b-in">Sign In <svg><use href="#i-arrow"/></svg></button>
+    <div class="foot"><p>Don’t have an account?</p><button class="lnk" data-go="signup">Create one — it’s free</button></div>
+  </section>
+
+  <!-- SIGN UP -->
+  <section class="view" id="signup" hidden>
+    <h1>Create your <span>account</span></h1>
+    <p class="sub">Set up your workspace in minutes.</p>
+    <div class="msg" id="m-up" role="alert"></div>
+    <div class="f"><svg><use href="#i-user"/></svg><input id="up-name" placeholder="Full name" autocomplete="name"></div>
+    <div class="f"><svg><use href="#i-store"/></svg><input id="up-store" placeholder="Store / business name (optional)" autocomplete="organization"></div>
+    <div class="f"><svg><use href="#i-mail"/></svg><input id="up-email" type="email" placeholder="you@example.com" autocomplete="email"></div>
+    <div class="f"><svg><use href="#i-lock"/></svg><input id="up-pass" type="password" placeholder="Create a password" autocomplete="new-password"><button class="eye" type="button" data-eye="up-pass" aria-label="Show password"><svg><use href="#i-eye"/></svg></button></div>
+    <div class="f"><svg><use href="#i-lock"/></svg><input id="up-conf" type="password" placeholder="Confirm password" autocomplete="new-password"><button class="eye" type="button" data-eye="up-conf" aria-label="Show password"><svg><use href="#i-eye"/></svg></button></div>
+    <button class="btn" id="b-up" style="margin-top:6px">Create Account <svg><use href="#i-arrow"/></svg></button>
+    <div class="foot"><p>Already have an account?</p><button class="lnk" data-go="signin">Sign in here</button></div>
+  </section>
+
+  <!-- SIGNED IN -->
+  <section class="view home" id="home" hidden>
+    <h1>You’re <span>in</span></h1>
+    <p class="sub" id="home-t"></p>
+    <button class="btn" id="b-out">Sign Out</button>
+  </section>
+
+  <div class="theme" role="group" aria-label="Theme">Theme
+    <button class="t-neon" data-t="neon" aria-label="Neon dark"></button>
+    <button class="t-gold" data-t="gold" aria-label="Gold"></button>
+    <button class="t-cream" data-t="cream" aria-label="Cream"></button>
+  </div>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+const store={
+  get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+};
+async function hash(s){
+  try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+  catch(e){return btoa(unescape(encodeURIComponent(s)))}
+}
+function msg(id,text,type){const m=$(id);m.textContent=text||'';m.className='msg'+(text?' show '+type:'')}
+const titles={signin:'StockSense – Sign in',signup:'StockSense – Sign up',home:'StockSense'};
+function show(v){
+  ['signin','signup','home'].forEach(n=>$(n).hidden=n!==v);
+  document.title=titles[v];msg('m-in');msg('m-up');
+}
+function setTheme(t){
+  document.body.dataset.theme=t;store.set('ss_theme',t);
+  document.querySelectorAll('[data-t]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===t));
+}
+const users=()=>store.get('ss_users',{});
+const okEmail=e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+
+document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>setTheme(b.dataset.t));
+document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>show(b.dataset.go));
+document.querySelectorAll('[data-eye]').forEach(b=>b.onclick=()=>{const i=$(b.dataset.eye);i.type=i.type==='password'?'text':'password'});
+$('forgot').onclick=()=>msg('m-in','Password reset isn’t set up yet. Contact your workspace admin.','err');
+document.addEventListener('keydown',e=>{if(e.key==='Enter'){const v=['signin','signup'].find(n=>!$(n).hidden);if(v)(v==='signin'?$('b-in'):$('b-up')).click()}});
+
+$('b-in').onclick=async()=>{
+  const email=$('in-email').value.trim().toLowerCase(),pass=$('in-pass').value;
+  if(!okEmail(email))return msg('m-in','Enter a valid email address.','err');
+  if(!pass)return msg('m-in','Enter your password.','err');
+  const u=users()[email];
+  if(!u){
+    msg('m-in','No account found for this email. Create one to continue.','err');
+    return;
+  }
+  if(u.hash!==await hash(pass))return msg('m-in','Incorrect password. Try again.','err');
+  store.set('ss_session',{email,name:u.name,store:u.store});
+  store.set('ss_remember',$('in-rem').checked?email:'');
+  enter();
+};
+
+$('b-up').onclick=async()=>{
+  const name=$('up-name').value.trim(),st=$('up-store').value.trim(),email=$('up-email').value.trim().toLowerCase(),p=$('up-pass').value,c=$('up-conf').value;
+  if(!name)return msg('m-up','Enter your full name.','err');
+  if(!okEmail(email))return msg('m-up','Enter a valid email address.','err');
+  if(p.length<8)return msg('m-up','Use at least 8 characters for your password.','err');
+  if(p!==c)return msg('m-up','Passwords don’t match.','err');
+  const all=users();
+  if(all[email])return msg('m-up','This email already has an account. Sign in instead.','err');
+  all[email]={name,store:st,hash:await hash(p)};store.set('ss_users',all);
+  ['up-name','up-store','up-email','up-pass','up-conf'].forEach(i=>$(i).value='');
+  $('in-email').value=email;$('in-pass').value='';
+  show('signin');msg('m-in','Account created. Sign in to continue.','ok');$('in-pass').focus();
+};
+
+function enter(){
+  const s=store.get('ss_session');
+  $('home-t').textContent='Signed in as '+s.name+(s.store?' · '+s.store:'')+'.';
+  show('home');
+}
+$('b-out').onclick=()=>{store.set('ss_session',null);$('in-pass').value='';show('signin')};
+
+setTheme(store.get('ss_theme','neon'));
+const rem=store.get('ss_remember','');
+if(rem){$('in-email').value=rem;$('in-rem').checked=true}
+store.get('ss_session')?enter():show('signin');
+</script>
+</body>
+</html>

@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block title %}{{ r.product_name }} — StockSense Product Analysis{% endblock %}
+
+{% block head %}
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+{% endblock %}
+
+{% block topbar_left %}
+  <div class="eyebrow">
+    <a href="{{ url_for('dashboard') }}">{{ t('Overview') }}</a> /
+    <a href="{{ url_for('inventory') }}">{{ t('Inventory') }}</a> /
+    {{ r.product_name }}
+  </div>
+  <h1>{{ r.product_name }}</h1>
+  <p class="subtitle">
+    {{ t('Product SKU') }}: <strong>{{ r.product_id }}</strong> · {{ t('Demand forecasting, safety stock, and inventory diagnosis') }}
+  </p>
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('reorder') }}" class="btn btn-outline">
+    ← {{ t('Back to Reorders') }}
+  </a>
+{% endblock %}
+
+{% block content %}
+
+{# Top KPI Grid #}
+<div class="metric-grid">
+  <div class="metric-card">
+    <div class="metric-top">
+      <span>{{ t('Current Stock') }}</span>
+      <div class="metric-icon icon-blue">📦</div>
+    </div>
+    <div class="metric-value">{{ "{:,.1f}".format(r.current_stock) }}</div>
+    <div class="metric-foot">
+      {{ t('Incoming on-order') }}: {{ "{:,.1f}".format(r.incoming_stock) }} {{ c.unit }}
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-top">
+      <span>{{ t('Forecast Demand') }}</span>
+      <div class="metric-icon icon-cyan">📈</div>
+    </div>
+    <div class="metric-value">{{ "{:,.1f}".format(r.forecast_demand) }}</div>
+    <div class="metric-foot">
+      {{ t('Avg daily') }}: {{ "{:,.2f}".format(r.forecast_demand / (r.lead_time_days + r.review_period_days)) }} {{ c.unit }}/day
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-top">
+      <span>{{ t('Recommended Order') }}</span>
+      <div class="metric-icon {% if r.recommended_order > 0 %}icon-red{% else %}icon-green{% endif %}">⚡</div>
+    </div>
+    <div class="metric-value {% if r.recommended_order > 0 %}kpi-critical{% else %}kpi-green{% endif %}">
+      {{ "{:,.0f}".format(r.recommended_order) }}
+    </div>
+    <div class="metric-foot">
+      {{ t('Est. Cost') }}: ₹{{ "{:,.0f}".format(r.estimated_order_cost) }}
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-top">
+      <span>{{ t('Reorder Priority') }}</span>
+      <div class="metric-icon icon-orange">🚨</div>
+    </div>
+    <div class="metric-value">
+      <span class="badge {{ r.priority|lower }}" style="font-size:16px;padding:6px 14px;">
+        {{ r.priority }}
+      </span>
+    </div>
+    <div class="metric-foot">
+      {{ t('Profit at risk') }}: ₹{{ "{:,.0f}".format(r.profit_at_risk) }}
+    </div>
+  </div>
+</div>
+
+{# Interactive Forecast Chart & Inventory Diagnostics Grid #}
+<div class="content-grid">
+
+  {# Left: Interactive Plotly Chart #}
+  <div class="panel">
+    <div class="panel-heading">
+      <div>
+        <h2>{{ t('Historical Sales & Future Demand Forecast') }}</h2>
+        <p>{{ t('Interactive time-series displaying actual daily sales, forward projection, and 90% confidence uncertainty bounds.') }}</p>
+      </div>
+      <span class="pill pill-blue">{{ r.forecast_meta.method or 'Time-Series Model' }}</span>
+    </div>
+
+    <div id="productDetailPlot" class="plotly-chart-wrap" style="height:360px;"></div>
+
+    <div class="chart-legend">
+      <span><i class="legend-history"></i> {{ t('Historical Sales') }}</span>
+      <span><i class="legend-forecast"></i> {{ t('Predicted Demand') }}</span>
+      <span><i class="legend-band"></i> {{ t('Confidence Range (±1.65σ)') }}</span>
+    </div>
+  </div>
+
+  {# Right: Replenishment Decision Breakdown #}
+  <div class="panel">
+    <div class="panel-heading">
+      <div>
+        <h2>{{ t('Replenishment Diagnosis') }}</h2>
+        <p>{{ t('Mathematical rationale for recommended purchase quantity.') }}</p>
+      </div>
+    </div>
+
+    {% if r.warning %}
+      <div class="warning-box">
+        <span>⚠️</span>
+        <div><strong>{{ t('Inventory Alert') }}:</strong> {{ r.warning }}</div>
+      </div>
+    {% endif %}
+
+    <div class="explanation-box">
+      {{ r.explanation }}
+    </div>
+
+    <div class="detail-stats">
+      <div class="stat-card">
+        <span>{{ t('Target Stock (S)') }}</span>
+        <strong>{{ "{:,.1f}".format(r.target_stock) }} {{ c.unit }}</strong>
+      </div>
+      <div class="stat-card">
+        <span>{{ t('Supplier Lead Time') }}</span>
+        <strong>{{ r.lead_time_days }} {{ t('days') }}</strong>
+      </div>
+      <div class="stat-card">
+        <span>{{ t('Review Period') }}</span>
+        <strong>{{ r.review_period_days }} {{ t('days') }}</strong>
+      </div>
+      <div class="stat-card">
+        <span>{{ t('Shelf Life Limit') }}</span>
+        <strong>{{ r.shelf_life_days }} {{ t('days') }}</strong>
+      </div>
+    </div>
+
+    <div class="method-note">
+      <strong>{{ t('Statistical Forecast Metadata') }}:</strong>
+      <p>
+        {{ t('Algorithm') }}: <strong>{{ r.forecast_meta.method }}</strong><br>
+        {{ t('Sample History') }}: <strong>{{ r.forecast_meta.history_days }} {{ t('days') }}</strong><br>
+        {{ t('Daily Volatility (σ)') }}: <strong>{{ "{:.2f}".format(r.forecast_meta.sigma_daily) }}</strong><br>
+        {% if r.forecast_meta.wape is not none %}
+          {{ t('Backtest WAPE') }}: <strong>{{ "{:.1f}%".format(r.forecast_meta.wape * 100) }}</strong>
+        {% endif %}
+      </p>
+    </div>
+  </div>
+
+</div>
+
+{# Day-by-day Forecast Schedule #}
+{% if r.forecast_meta.forecast %}
+<div class="panel" style="margin-top:22px;">
+  <div class="panel-heading">
+    <div>
+      <h2>{{ t('Daily Forecast Demand Schedule') }}</h2>
+      <p>{{ t('Granular forward projection across lead time and review window.') }}</p>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));gap:12px;margin-top:10px;">
+    {% for val in r.forecast_meta.forecast %}
+      <div style="background:var(--bg-2);padding:12px;border-radius:10px;text-align:center;">
+        <span style="font-size:11px;color:var(--ink-3);display:block;margin-bottom:4px;">{{ t('Day') }} +{{ loop.index }}</span>
+        <strong style="font-family:'Manrope',sans-serif;font-size:20px;color:var(--ink);">{{ "{:.1f}".format(val) }}</strong>
+        <span style="font-size:10px;color:var(--ink-4);display:block;">{{ c.unit }}</span>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  var chartData = {{ c|tojson }};
+
+  function getThemeColors() {
+    var theme = document.documentElement.getAttribute('data-theme') || 'neon-dark';
+    if (theme === 'gold') {
+      return {
+        bg: '#141414',
+        paper: '#141414',
+        text: '#ede5d0',
+        grid: 'rgba(196,155,80,0.12)',
+        hist: '#c49b50',
+        fore: '#e8c87a',
+        band: 'rgba(232,200,122,0.12)'
+      };
+    } else if (theme === 'cream') {
+      return {
+        bg: '#faf7f2',
+        paper: '#faf7f2',
+        text: '#2a1208',
+        grid: 'rgba(100,30,30,0.08)',
+        hist: '#7a1530',
+        fore: '#c04060',
+        band: 'rgba(192,64,96,0.10)'
+      };
+    }
+    // neon-dark
+    return {
+      bg: '#0e1526',
+      paper: '#0e1526',
+      text: '#e2eaff',
+      grid: 'rgba(100,160,255,0.10)',
+      hist: '#4f8dff',
+      fore: '#00d4c8',
+      band: 'rgba(0,212,200,0.12)'
+    };
+  }
+
+  function renderProductPlot() {
+    var colors = getThemeColors();
+
+    var traces = [];
+
+    // 1. Confidence Band Upper
+    traces.push({
+      x: chartData.fd,
+      y: chartData.hi,
+      type: 'scatter',
+      mode: 'lines',
+      line: { width: 0, color: 'transparent' },
+      showlegend: false,
+      hoverinfo: 'none'
+    });
+
+    // 2. Confidence Band Lower (fills to upper)
+    traces.push({
+      x: chartData.fd,
+      y: chartData.lo,
+      type: 'scatter',
+      mode: 'lines',
+      fill: 'tonexty',
+      fillcolor: colors.band,
+      line: { width: 0, color: 'transparent' },
+      name: 'Uncertainty Band',
+      hoverinfo: 'none'
+    });
+
+    // 3. Historical Sales
+    traces.push({
+      x: chartData.hd,
+      y: chartData.hv,
+      type: 'scatter',
+      mode: 'lines+markers',
+      name: 'Actual Sales',
+      line: { color: colors.hist, width: 2.5 },
+      marker: { size: 5, color: colors.hist },
+      hovertemplate: '<b>Actual</b>: %{y} ' + chartData.unit + '<br>Date: %{x}<extra></extra>'
+    });
+
+    // 4. Forecast Demand
+    traces.push({
+      x: chartData.fd,
+      y: chartData.fv,
+      type: 'scatter',
+      mode: 'lines+markers',
+      name: 'Forecast',
+      line: { color: colors.fore, width: 2.5, dash: 'dot' },
+      marker: { size: 6, color: colors.fore, symbol: 'diamond' },
+      hovertemplate: '<b>Forecast</b>: %{y} ' + chartData.unit + '<br>Date: %{x}<extra></extra>'
+    });
+
+    var layout = {
+      paper_bgcolor: colors.paper,
+      plot_bgcolor: colors.bg,
+      font: { family: 'Inter, sans-serif', color: colors.text, size: 12 },
+      margin: { l: 45, r: 20, t: 20, b: 40 },
+      xaxis: {
+        gridcolor: colors.grid,
+        showgrid: true,
+        zeroline: false
+      },
+      yaxis: {
+        gridcolor: colors.grid,
+        showgrid: true,
+        zeroline: false,
+        title: chartData.unit
+      },
+      hovermode: 'x unified',
+      showlegend: false
+    };
+
+    var config = { responsive: true, displayModeBar: false };
+    Plotly.newPlot('productDetailPlot', traces, layout, config);
+  }
+
+  // Hook into recolorPlotly for live theme switches
+  window.SS = window.SS || {};
+  window.SS.recolorPlotly = function() {
+    renderProductPlot();
+  };
+
+  document.addEventListener('DOMContentLoaded', renderProductPlot);
+</script>
+{% endblock %}

@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Sales Data — StockSense{% endblock %}
+
+{% block topbar_left %}
+  <div class="eyebrow">DATA MANAGEMENT / SALES</div>
+  <h1>Sales Data</h1>
+  <p class="subtitle">Upload, browse, and filter your historical sales records.</p>
+{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('dashboard') }}#data-tools" class="btn btn-outline btn-sm">↑ Upload CSV</a>
+{% endblock %}
+
+{% block content %}
+
+{# ── SEARCH + FILTER BAR ── #}
+<form method="get" action="{{ url_for('sales_page') }}" class="search-bar">
+  <div class="search-input-wrap">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+    </svg>
+    <input type="search" name="search" placeholder="Search product name or ID…"
+           value="{{ search }}" id="salesSearch">
+  </div>
+
+  <select name="product" class="filter-select" onchange="this.form.submit()">
+    <option value="">All products</option>
+    {% for p in product_list %}
+    <option value="{{ p.product_id }}" {% if product_filter == p.product_id %}selected{% endif %}>
+      {{ p.product_name }} ({{ p.product_id }})
+    </option>
+    {% endfor %}
+  </select>
+
+  <button type="submit" class="btn btn-primary btn-sm">Search</button>
+
+  {% if search or product_filter %}
+  <a href="{{ url_for('sales_page') }}" class="btn btn-outline btn-sm">✕ Clear</a>
+  {% endif %}
+</form>
+
+{# ── SALES TABLE ── #}
+<section class="table-panel">
+  <div class="panel-heading" style="padding:22px 24px 0">
+    <div>
+      <h2>Sales Records</h2>
+      <p>{{ data.total }} total record{{ 's' if data.total != 1 else '' }}
+        {% if search %} matching "<strong>{{ search }}</strong>"{% endif %}
+        {% if product_filter %} for product <strong>{{ product_filter }}</strong>{% endif %}
+      </p>
+    </div>
+    <a class="btn btn-outline btn-sm" href="{{ url_for('dashboard') }}#data-tools">
+      ↑ Upload CSV
+    </a>
+  </div>
+
+  {% if data.rows %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>DATE</th>
+          <th>PRODUCT</th>
+          <th>PRODUCT ID</th>
+          <th>QTY SOLD</th>
+          <th>UNIT PRICE</th>
+          <th>UNIT COST</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in data.rows %}
+        <tr>
+          <td style="color:var(--ink-3);font-size:13px">{{ row.date }}</td>
+          <td>
+            <div class="table-product">
+              <span class="product-avatar av-{{ loop.index0 % 5 }}">{{ row.product_name[:1] }}</span>
+              <strong>{{ row.product_name }}</strong>
+            </div>
+          </td>
+          <td style="font-size:13px;color:var(--ink-3)">{{ row.product_id }}</td>
+          <td><strong>{{ "{:,.2f}".format(row.quantity_sold) }}</strong></td>
+          <td>₹{{ "{:,.2f}".format(row.unit_price) }}</td>
+          <td>{% if row.unit_cost is not none %}₹{{ "{:,.2f}".format(row.unit_cost) }}{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# Pagination #}
+  <div class="table-footer">
+    <span>Page {{ data.page }} of {{ data.pages }} · {{ data.total }} records</span>
+    <div class="pagination">
+      {% if data.page > 1 %}
+      <a class="page-btn" href="{{ url_for('sales_page', page=data.page-1, search=search, product=product_filter) }}">←</a>
+      {% else %}
+      <span class="page-btn disabled">←</span>
+      {% endif %}
+
+      {% for p in range([1, data.page-2]|max, [data.pages+1, data.page+3]|min) %}
+      <a class="page-btn {% if p == data.page %}active{% endif %}"
+         href="{{ url_for('sales_page', page=p, search=search, product=product_filter) }}">{{ p }}</a>
+      {% endfor %}
+
+      {% if data.page < data.pages %}
+      <a class="page-btn" href="{{ url_for('sales_page', page=data.page+1, search=search, product=product_filter) }}">→</a>
+      {% else %}
+      <span class="page-btn disabled">→</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">📋</div>
+    <h3>No sales records found</h3>
+    {% if search or product_filter %}
+    <p>No records match your current filter. <a href="{{ url_for('sales_page') }}" style="color:var(--blue)">Clear filters</a>.</p>
+    {% else %}
+    <p>Upload a sales CSV or load the demo workspace to see records here.</p>
+    <a href="{{ url_for('dashboard') }}#data-tools" class="btn btn-primary" style="margin-top:8px">↑ Upload Sales CSV</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+
+{% endblock %}

@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+{% block title %}Inventory — StockSense{% endblock %}
+
+{% block topbar_left %}
+  <div class="eyebrow">INVENTORY MANAGEMENT</div>
+  <h1>Inventory</h1>
+  <p class="subtitle">All products with current stock, forecast demand, and reorder status.</p>
+{% endblock %}
+
+{% block topbar_actions %}
+  <button class="btn btn-primary" id="addProductBtn" type="button">
+    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </svg>
+    + Add Product
+  </button>
+{% endblock %}
+
+{% block content %}
+
+{# KPI strip #}
+<section class="metric-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:24px">
+  <article class="metric-card">
+    <div class="metric-top"><span>Total Products</span><div class="metric-icon icon-blue">📦</div></div>
+    <div class="metric-value kpi-blue">{{ products|length }}</div>
+    <div class="metric-foot">In your inventory</div>
+  </article>
+  <article class="metric-card">
+    <div class="metric-top"><span>Critical / High Risk</span><div class="metric-icon icon-red">⚠</div></div>
+    <div class="metric-value {% if kpis.products_at_risk > 0 %}kpi-critical{% endif %}">
+      {{ kpis.products_at_risk }}
+    </div>
+    <div class="metric-foot">Require immediate attention</div>
+  </article>
+  <article class="metric-card">
+    <div class="metric-top"><span>Estimated Reorder Cost</span><div class="metric-icon icon-green">₹</div></div>
+    <div class="metric-value kpi-green">₹{{ "{:,.0f}".format(kpis.estimated_order_cost) }}</div>
+    <div class="metric-foot">Total estimated order value</div>
+  </article>
+</section>
+
+{# Inventory table #}
+<section class="table-panel">
+  <div class="panel-heading" style="padding:22px 24px 0">
+    <div>
+      <h2>Product Inventory</h2>
+      <p>{{ products|length }} product{{ 's' if products|length != 1 else '' }} registered</p>
+    </div>
+    <button class="btn btn-primary btn-sm" id="addProductBtn2" type="button">+ Add Product</button>
+  </div>
+
+  {% if products %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>PRODUCT</th>
+          <th>CATEGORY</th>
+          <th>IN STOCK</th>
+          <th>INCOMING</th>
+          <th>FORECAST DEMAND</th>
+          <th>LEAD TIME</th>
+          <th>PRIORITY</th>
+          <th>REORDER QTY</th>
+          <th>ANALYSIS</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in products %}
+        <tr>
+          <td>
+            <div class="table-product">
+              <span class="product-avatar av-{{ loop.index0 % 5 }}">{{ p.product_name[:1] }}</span>
+              <span>
+                <strong>{{ p.product_name or p.product_id }}</strong>
+                <small>{{ p.product_id }}</small>
+              </span>
+            </div>
+          </td>
+          <td style="font-size:13px;color:var(--ink-3)">{{ p.category or '—' }}</td>
+          <td><strong>{{ "{:,.0f}".format(p.current_stock) }}</strong>
+              <small style="font-size:11px;color:var(--ink-3)"> {{ p.unit or 'units' }}</small></td>
+          <td style="color:var(--ink-3)">{{ "{:,.0f}".format(p.incoming_stock) }}</td>
+          <td>{{ "{:,.1f}".format(p.forecast_demand) }}</td>
+          <td style="color:var(--ink-3)">{{ p.lead_time_days }}d</td>
+          <td><span class="badge {{ p.priority|lower }}">{{ p.priority }}</span></td>
+          <td><strong class="order-qty">{{ p.recommended_order }}</strong></td>
+          <td>
+            <a class="details-link" href="{{ url_for('detail', pid=p.product_id) }}">
+              Analyze ↗
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="table-footer">
+    <span>{{ products|length }} product{{ 's' if products|length != 1 else '' }}</span>
+    <span>Click "Analyze" to view detailed forecasts and reorder reasoning.</span>
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">📦</div>
+    <h3>No products yet</h3>
+    <p>Add a product manually or upload a product settings CSV to get started.</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:8px">
+      <button class="btn btn-primary" id="addProductBtnEmpty" type="button">+ Add Product</button>
+      <a href="{{ url_for('dashboard') }}#data-tools" class="btn btn-outline">↑ Upload CSV</a>
+    </div>
+  </div>
+  {% endif %}
+</section>
+
+
+{# ════════════════════════════════
+   ADD PRODUCT MODAL
+   ════════════════════════════════ #}
+<div class="modal-overlay" id="addProductModal" role="dialog" aria-modal="true" aria-label="Add Product">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h2 style="margin-bottom:4px">Add Product</h2>
+        <p style="font-size:14px;color:var(--ink-3)">Create a real database record for this product.</p>
+      </div>
+      <button class="modal-close" id="modalClose" type="button" aria-label="Close">✕</button>
+    </div>
+
+    <div id="modalError" class="flash error" style="display:none;margin-bottom:16px"></div>
+    <div id="modalSuccess" class="flash success" style="display:none;margin-bottom:16px"></div>
+
+    <div class="modal-grid">
+
+      <div class="form-group">
+        <label class="field-label field-required" for="ap_product_id">Product ID / SKU</label>
+        <input type="text" id="ap_product_id" placeholder="e.g. P13" maxlength="50">
+        <span class="field-hint">Unique identifier — cannot be changed later.</span>
+      </div>
+
+      <div class="form-group">
+        <label class="field-label field-required" for="ap_product_name">Product Name</label>
+        <input type="text" id="ap_product_name" placeholder="e.g. Whole Wheat Flour">
+      </div>
+
+      <div class="form-group">
+        <label class="field-label" for="ap_category">Category</label>
+        <input type="text" id="ap_category" placeholder="e.g. Grains, Dairy…">
+      </div>
+
+      <div class="form-group">
+        <label class="field-label" for="ap_unit">Unit of Measurement</label>
+        <select id="ap_unit">
+          <option value="units">Units / Pieces</option>
+          <option value="kg">Kilograms (kg)</option>
+          <option value="litres">Litres</option>
+          <option value="packs">Packs</option>
+          <option value="dozens">Dozens</option>
+          <option value="boxes">Boxes</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="field-label field-required" for="ap_current_stock">Current Stock</label>
+        <input type="number" id="ap_current_stock" min="0" step="0.01" value="0">
+      </div>
+
+      <div class="form-group">
+        <label class="field-label" for="ap_incoming_stock">Incoming Stock</label>
+        <input type="number" id="ap_incoming_stock" min="0" step="0.01" value="0">
+      </div>
+
+      <div class="form-group">
+        <label class="field-label field-required" for="ap_lead_time">Lead Time (days)</label>
+        <input type="number" id="ap_lead_time" min="1" value="7">
+      </div>
+
+      <div class="form-group">
+        <label class="field-label field-required" for="ap_review_period">Review Period (days)</label>
+        <input type="number" id="ap_review_period" min="1" value="7">
+      </div>
+
+      <div class="form-group">
+        <label class="field-label field-required" for="ap_shelf_life">Shelf Life (days)</label>
+        <input type="number" id="ap_shelf_life" min="1" value="365">
+        <span class="field-hint">365 = non-perishable</span>
+      </div>
+
+      <div class="form-group">
+        <label class="field-label" for="ap_unit_cost">Unit Cost (₹)</label>
+        <input type="number" id="ap_unit_cost" min="0" step="0.01" placeholder="Optional">
+      </div>
+
+      <div class="form-group">
+        <label class="field-label field-required" for="ap_moq">Min. Order Qty</label>
+        <input type="number" id="ap_moq" min="1" value="1">
+      </div>
+
+      <div class="form-group">
+        <label class="field-label field-required" for="ap_pack_size">Pack Size</label>
+        <input type="number" id="ap_pack_size" min="1" value="1">
+      </div>
+
+      <div class="form-group full">
+        <label class="field-label" for="ap_supplier">Supplier Name</label>
+        <input type="text" id="ap_supplier" placeholder="Optional supplier name">
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" id="modalCancelBtn" type="button">Cancel</button>
+      <button class="btn btn-primary" id="saveProductBtn" type="button">
+        Save Product
+      </button>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  var modal   = document.getElementById('addProductModal');
+  var errBox  = document.getElementById('modalError');
+  var okBox   = document.getElementById('modalSuccess');
+
+  function openModal() {
+    modal.classList.add('open');
+    document.getElementById('ap_product_id').focus();
+  }
+  function closeModal() {
+    modal.classList.remove('open');
+    errBox.style.display = 'none';
+    okBox.style.display  = 'none';
+  }
+
+  // Open triggers
+  ['addProductBtn','addProductBtn2','addProductBtnEmpty'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('click', openModal);
+  });
+
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('modalCancelBtn').addEventListener('click', closeModal);
+  modal.addEventListener('click', function(e) { if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
+
+  // Save product
+  document.getElementById('saveProductBtn').addEventListener('click', function() {
+    var btn = this;
+    errBox.style.display = 'none';
+    okBox.style.display  = 'none';
+
+    var pid   = document.getElementById('ap_product_id').value.trim();
+    var pname = document.getElementById('ap_product_name').value.trim();
+    if (!pid)   { showError('Product ID is required.'); return; }
+    if (!pname) { showError('Product name is required.'); return; }
+
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+
+    var payload = {
+      product_id:        pid,
+      product_name:      pname,
+      category:          document.getElementById('ap_category').value.trim(),
+      unit:              document.getElementById('ap_unit').value,
+      current_stock:     parseFloat(document.getElementById('ap_current_stock').value) || 0,
+      incoming_stock:    parseFloat(document.getElementById('ap_incoming_stock').value) || 0,
+      lead_time_days:    parseInt(document.getElementById('ap_lead_time').value)       || 7,
+      review_period_days:parseInt(document.getElementById('ap_review_period').value)   || 7,
+      shelf_life_days:   parseInt(document.getElementById('ap_shelf_life').value)      || 365,
+      unit_cost:         document.getElementById('ap_unit_cost').value ? parseFloat(document.getElementById('ap_unit_cost').value) : null,
+      min_order_qty:     parseInt(document.getElementById('ap_moq').value)             || 1,
+      pack_size:         parseInt(document.getElementById('ap_pack_size').value)       || 1,
+      supplier_name:     document.getElementById('ap_supplier').value.trim(),
+    };
+
+    fetch('{{ url_for("api_add_product") }}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      btn.classList.remove('btn-loading');
+      btn.disabled = false;
+      if (data.ok) {
+        showSuccess('Product "' + data.product_name + '" saved! Refreshing…');
+        setTimeout(function() { window.location.reload(); }, 1200);
+      } else {
+        showError(data.error || 'Failed to save product.');
+      }
+    })
+    .catch(function(e) {
+      btn.classList.remove('btn-loading');
+      btn.disabled = false;
+      showError('Network error — please try again.');
+    });
+  });
+
+  function showError(msg) {
+    errBox.textContent = '✕ ' + msg;
+    errBox.style.display = 'flex';
+    errBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  function showSuccess(msg) {
+    okBox.textContent = '✓ ' + msg;
+    okBox.style.display = 'flex';
+  }
+})();
+</script>
+{% endblock %}

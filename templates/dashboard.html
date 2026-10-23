@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — StockSense{% endblock %}
+
+{% block topbar_left %}
+  <div class="eyebrow">INVENTORY OPERATIONS / OVERVIEW</div>
+  <h1>{{ t('Inventory overview') }}</h1>
+  <p class="subtitle">{{ t('Turn sales history into clearer replenishment decisions.') }}</p>
+{% endblock %}
+
+{% block topbar_actions %}
+  <button class="btn btn-primary btn-sm" type="button" onclick="document.getElementById('addProductModal').showModal()">＋ Add Product</button>
+  <a class="btn btn-outline btn-sm" href="{{ url_for('sales_page') }}">↑ Upload CSV</a>
+  <span class="pill pill-green">
+    <span class="live-dot"></span>
+    {{ t('Local analytics') }}
+  </span>
+  <form method="post" style="margin:0">
+    <input type="hidden" name="action" value="demo">
+    <button class="btn btn-outline btn-sm" type="submit">↻ {{ t('Load demo data') }}</button>
+  </form>
+{% endblock %}
+
+{% block content %}
+
+{# ── WELCOME PANEL (no data) ── #}
+{% if not has_data %}
+<section class="welcome-panel">
+  <div class="welcome-copy">
+    <div class="welcome-pill">✦ {{ t('GET STARTED') }}</div>
+    <h2>{{ t('Your inventory decisions,') }}<br>{{ t('backed by data.') }}</h2>
+    <p class="sub">{{ t('Load the included synthetic demo data to explore demand forecasts, stock risk, shelf-life-aware recommendations and reorder costs.') }}</p>
+    <div class="welcome-actions">
+      <form method="post" style="margin:0">
+        <input type="hidden" name="action" value="demo">
+        <button class="btn btn-primary btn-lg" type="submit">
+          {{ t('Load demo workspace') }} →
+        </button>
+      </form>
+      <a href="{{ url_for('sales_page') }}" class="btn btn-outline btn-lg">
+        ↑ Upload CSV
+      </a>
+    </div>
+    <p class="welcome-note">{{ t('Demo values are synthetic and intended for demonstration only.') }}</p>
+  </div>
+
+  <div class="welcome-visual" aria-hidden="true">
+    <div class="visual-orb visual-orb-1"></div>
+    <div class="visual-orb visual-orb-2"></div>
+    <div class="visual-card">
+      <span class="mini-label">{{ t('DEMAND SIGNAL') }}</span>
+      <strong>+18.6%</strong>
+      <span class="trend">↗ {{ t('Forecast movement') }}</span>
+      <div class="sparkline">
+        <b style="height:30%"></b><b style="height:44%"></b>
+        <b style="height:36%"></b><b style="height:58%"></b>
+        <b style="height:49%"></b><b style="height:76%"></b>
+        <b style="height:64%"></b><b style="height:91%"></b>
+        <b style="height:83%"></b>
+      </div>
+    </div>
+    <div class="floating-chip">✦ {{ t('Explainable recommendations') }}</div>
+  </div>
+</section>
+
+{% else %}
+
+{# ── KPI CARDS ── #}
+<section class="metric-grid">
+
+  <article class="metric-card">
+    <div class="metric-top">
+      <span>{{ t('Products monitored') }}</span>
+      <div class="metric-icon icon-blue">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+        </svg>
+      </div>
+    </div>
+    <div class="metric-value kpi-blue">{{ products|length }}</div>
+    <div class="metric-foot">{{ t('Across active inventory') }}</div>
+  </article>
+
+  <article class="metric-card">
+    <div class="metric-top">
+      <span>{{ t('Products at risk') }}</span>
+      <div class="metric-icon icon-red">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+      </div>
+    </div>
+    <div class="metric-value {% if kpis.products_at_risk > 0 %}kpi-critical{% endif %}">
+      {{ kpis.products_at_risk }}
+    </div>
+    <div class="metric-foot">{{ t('Critical or high priority') }}</div>
+  </article>
+
+  <article class="metric-card">
+    <div class="metric-top">
+      <span>{{ t('Units to reorder') }}</span>
+      <div class="metric-icon icon-cyan">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+        </svg>
+      </div>
+    </div>
+    <div class="metric-value kpi-blue">{{ "{:,.0f}".format(kpis.total_order_units) }}</div>
+    <div class="metric-foot">{{ t('After budget prioritization') }}</div>
+  </article>
+
+  <article class="metric-card">
+    <div class="metric-top">
+      <span>{{ t('Estimated order cost') }}</span>
+      <div class="metric-icon icon-green">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </div>
+    </div>
+    <div class="metric-value kpi-green">₹{{ "{:,.0f}".format(kpis.estimated_order_cost) }}</div>
+    <div class="metric-foot">{{ t('Estimated from unit costs') }}</div>
+  </article>
+
+  <article class="metric-card">
+    <div class="metric-top">
+      <span>Total Stock</span>
+      <div class="metric-icon icon-purple">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+        </svg>
+      </div>
+    </div>
+    <div class="metric-value" style="font-size:28px">{{ "{:,.0f}".format(total_stock) }}</div>
+    <div class="metric-foot">Units currently in stock</div>
+  </article>
+
+  <article class="metric-card">
+    <div class="metric-top">
+      <span>Expiry Risk Items</span>
+      <div class="metric-icon icon-orange">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+      </div>
+    </div>
+    <div class="metric-value {% if expiry_risk > 0 %}kpi-critical{% endif %}">{{ expiry_risk }}</div>
+    <div class="metric-foot">Perishable products with stock</div>
+  </article>
+
+</section>
+
+
+{# ── CHARTS + INSIGHTS ── #}
+<section class="content-grid">
+
+  {# Replenishment priorities chart #}
+  <article class="panel">
+    <div class="panel-heading">
+      <div>
+        <h2>{{ t('Replenishment priorities') }}</h2>
+        <p>{{ t('Products ranked by urgency and estimated risk') }}</p>
+      </div>
+      <div class="icon-box icon-blue">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+        </svg>
+      </div>
+    </div>
+
+    {% if results %}
+    <div class="priority-bars">
+      {% set max_order = ([results|map(attribute='recommended_order')|max, 1]|max) %}
+      {% for item in results[:8] %}
+      <div class="priority-row">
+        <div class="priority-name">
+          <span class="product-avatar av-{{ loop.index0 % 5 }}">{{ item.product_name[:1] }}</span>
+          <span>{{ item.product_name }}</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill bar-{{ item.priority|lower }}"
+               style="width: {{ ([item.recommended_order * 100 / max_order, 100]|min)|round }}%"></div>
+        </div>
+        <span class="bar-number">{{ item.recommended_order }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="chart-legend">
+      <span><i class="legend-critical"></i> {{ t('Critical') }}</span>
+      <span><i class="legend-high"></i> {{ t('High') }}</span>
+      <span><i class="legend-normal"></i> {{ t('Other priorities') }}</span>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding:40px 16px">
+      <div class="empty-icon">📊</div>
+      <h3>No data yet</h3>
+      <p>Upload a sales CSV or load the demo workspace to see replenishment priorities.</p>
+    </div>
+    {% endif %}
+  </article>
+
+  {# Decision insights #}
+  <article class="panel">
+    <div class="panel-heading">
+      <div>
+        <h2>{{ t('Decision insights') }}</h2>
+        <p>{{ t('What the current plan indicates') }}</p>
+      </div>
+      <div class="icon-box icon-purple">✦</div>
+    </div>
+
+    <div class="insight-item">
+      <span class="insight-symbol sym-orange">!</span>
+      <div>
+        <strong>
+          {{ results|selectattr('priority','equalto','Critical')|list|length }}
+          {{ t('critical priorities') }}
+        </strong>
+        <p>{{ t('Review the most urgent products first to reduce stockout risk.') }}</p>
+      </div>
+    </div>
+
+    <div class="insight-item">
+      <span class="insight-symbol sym-blue">↗</span>
+      <div>
+        <strong>{{ t('Lead-time-aware planning') }}</strong>
+        <p>{{ t('Forecast demand is considered across supplier lead time and review period.') }}</p>
+      </div>
+    </div>
+
+    <div class="insight-item">
+      <span class="insight-symbol sym-green">✓</span>
+      <div>
+        <strong>{{ t('Shelf-life guardrails') }}</strong>
+        <p>{{ t('Perishable products are checked against a demand-based order cap.') }}</p>
+      </div>
+    </div>
+
+    <div class="insight-note">
+      {{ t('Forecast quality depends on data history. Review low-confidence warnings before acting.') }}
+    </div>
+  </article>
+
+</section>
+
+
+{# ── REORDER TABLE ── #}
+<section class="table-panel" id="reorders">
+  <div class="panel-heading" style="padding:22px 24px 0">
+    <div>
+      <h2>{{ t('Smart reorder recommendations') }}</h2>
+      <p>{{ t('Recommended actions generated from sales history and product settings') }}</p>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <a class="btn btn-outline btn-sm" href="{{ url_for('download') }}">↓ {{ t('Export CSV') }}</a>
+      <a class="btn btn-outline btn-sm" href="{{ url_for('reorder') }}">View all →</a>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>{{ t('PRODUCT') }}</th>
+          <th>{{ t('PRIORITY') }}</th>
+          <th>{{ t('IN STOCK') }}</th>
+          <th>{{ t('FORECAST DEMAND') }}</th>
+          <th>{{ t('LEAD TIME') }}</th>
+          <th>{{ t('REORDER QTY') }}</th>
+          <th>{{ t('EST. COST') }}</th>
+          <th>{{ t('DETAILS') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in results %}
+        <tr>
+          <td>
+            <div class="table-product">
+              <span class="product-avatar av-{{ loop.index0 % 5 }}">{{ item.product_name[:1] }}</span>
+              <span>
+                <strong>{{ item.product_name }}</strong>
+                <small>{{ item.product_id }}</small>
+              </span>
+            </div>
+          </td>
+          <td><span class="badge {{ item.priority|lower }}">{{ t(item.priority) }}</span></td>
+          <td>{{ "{:,.0f}".format(item.current_stock) }}</td>
+          <td>{{ "{:,.1f}".format(item.forecast_demand) }}</td>
+          <td>{{ item.lead_time_days }} {{ t('days') }}</td>
+          <td><strong class="order-qty">{{ item.recommended_order }}</strong></td>
+          <td>₹{{ "{:,.0f}".format(item.estimated_order_cost) }}</td>
+          <td>
+            <a class="details-link" href="{{ url_for('detail', pid=item.product_id) }}">
+              {{ t('Analyze') }} ↗
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="table-footer">
+    <span>{{ t('Showing') }} {{ results|length }} {{ t('products') }}</span>
+    <span>{{ t('Recommendations are decision support, not automatic purchase orders.') }}</span>
+  </div>
+</section>
+
+{% endif %}
+
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// File input display names
+function setupDropzone(inputId, labelId, nameId) {
+  var inp = document.getElementById(inputId);
+  if (!inp) return;
+  inp.addEventListener('change', function() {
+    var lbl = document.getElementById(nameId);
+    if (lbl && this.files[0]) lbl.textContent = '✓ ' + this.files[0].name;
+  });
+  // Drag & drop
+  var zone = document.getElementById(labelId);
+  if (!zone) return;
+  zone.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', function() { this.classList.remove('drag-over'); });
+  zone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    this.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) {
+      inp.files = e.dataTransfer.files;
+      var lbl = document.getElementById(nameId);
+      if (lbl) lbl.textContent = '✓ ' + e.dataTransfer.files[0].name;
+    }
+  });
+}
+// CSV import is handled on the dedicated Sales Data page.
+</script>
+
+<dialog id="addProductModal" class="ss-modal">
+  <form id="addProductForm" class="modal-card">
+    <div class="panel-heading"><div><h2>＋ Add a product</h2><p>Add a product to your catalogue and inventory.</p></div><button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('addProductModal').close()">✕</button></div>
+    <div class="settings-grid">
+      <div class="form-group"><label class="field-label">Product ID *</label><input name="product_id" required placeholder="e.g. P101"></div>
+      <div class="form-group"><label class="field-label">Product name *</label><input name="product_name" required placeholder="e.g. Organic rice"></div>
+      <div class="form-group"><label class="field-label">Category</label><input name="category" placeholder="Grocery"></div>
+      <div class="form-group"><label class="field-label">Current stock</label><input name="current_stock" type="number" min="0" step="any" value="0"></div>
+      <div class="form-group"><label class="field-label">Incoming stock</label><input name="incoming_stock" type="number" min="0" step="any" value="0"></div>
+      <div class="form-group"><label class="field-label">Unit purchase cost (₹)</label><input name="unit_cost" type="number" min="0" step="any"></div>
+      <div class="form-group"><label class="field-label">Supplier lead time (days)</label><input name="lead_time_days" type="number" min="1" value="7" required></div>
+      <div class="form-group"><label class="field-label">Review period (days)</label><input name="review_period_days" type="number" min="1" value="7" required></div>
+      <div class="form-group"><label class="field-label">Shelf life (days; 365 for non-perishable)</label><input name="shelf_life_days" type="number" min="1" value="365" required></div>
+      <div class="form-group"><label class="field-label">Stock age (days, optional)</label><input name="stock_age_days" type="number" min="0"></div>
+      <div class="form-group"><label class="field-label">Expiry date (optional)</label><input name="expiry_date" type="date"></div>
+      <div class="form-group"><label class="field-label">Supplier (optional)</label><input name="supplier_name"></div>
+    </div>
+    <p id="addProductMsg" class="field-hint" role="status"></p>
+    <div class="modal-actions"><button type="button" class="btn btn-outline" onclick="document.getElementById('addProductModal').close()">Cancel</button><button type="submit" class="btn btn-primary">Save product</button></div>
+  </form>
+</dialog>
+<script>
+(function(){const f=document.getElementById('addProductForm');if(!f)return;f.addEventListener('submit',async e=>{e.preventDefault();const msg=document.getElementById('addProductMsg');const data=Object.fromEntries(new FormData(f).entries());try{const r=await fetch('{{ url_for("api_add_product") }}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||'Could not save product.');msg.textContent='Product saved successfully. Refreshing dashboard…';msg.style.color='var(--success-color, #35c98a)';setTimeout(()=>location.reload(),450);}catch(err){msg.textContent=err.message;msg.style.color='var(--critical-color, #e85d75)';}});})();
+</script>
+
+{% endblock %}

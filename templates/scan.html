@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Scan Products — StockSense{% endblock %}
+{% block topbar_left %}<div class="eyebrow">INVENTORY OPERATIONS / CAMERA</div><h1>Scan Products</h1><p class="subtitle">Use your camera to detect supported objects, review the count, and confirm stock updates.</p>{% endblock %}
+{% block content %}
+<div class="content-grid">
+ <section class="panel"><div class="panel-heading"><div><h2>Camera scanner</h2><p>Camera access works on localhost or HTTPS in supported browsers.</p></div></div><video id="cameraVideo" autoplay playsinline muted style="width:100%;max-height:420px;object-fit:cover;border-radius:14px;background:#080b1a"></video><canvas id="cameraCanvas" hidden></canvas><div class="modal-actions" style="margin-top:14px"><button class="btn btn-primary" id="startCamera">Start camera</button><button class="btn btn-outline" id="captureScan" disabled>Capture & detect</button><button class="btn btn-outline" id="stopCamera" disabled>Stop camera</button></div><p id="scanStatus" class="field-hint" role="status">Start the camera, point it at the products, and capture a frame.</p><p class="field-hint">Detection uses the classes supported by the configured YOLO model. It may detect generic objects rather than exact brands or SKUs. Always review the result before updating inventory.</p></section>
+ <section class="panel"><div class="panel-heading"><div><h2>Review & add stock</h2><p>Confirm a product mapping and quantity before saving.</p></div></div><div class="form-group"><label class="field-label" for="scanProduct">Catalogue product</label><select id="scanProduct" class="filter-select" style="width:100%"><option value="">Choose a product</option>{% for p in products %}<option value="{{ p.product_id }}">{{ p.product_name or p.product_id }} ({{ p.product_id }})</option>{% endfor %}</select></div><div class="form-group" style="margin-top:14px"><label class="field-label" for="scanQuantity">Confirmed quantity to add</label><input id="scanQuantity" type="number" min="1" max="10000" value="1"></div><div id="detectionResults" class="field-hint" style="margin-top:16px">No detections yet.</div><button class="btn btn-primary" id="confirmStock" style="margin-top:16px" disabled>Confirm & update stock</button></section>
+</div>
+<script>
+(()=>{
+ const video=document.getElementById('cameraVideo'), canvas=document.getElementById('cameraCanvas');
+ const status=document.getElementById('scanStatus'), start=document.getElementById('startCamera');
+ const capture=document.getElementById('captureScan'), stop=document.getElementById('stopCamera');
+ const results=document.getElementById('detectionResults'), confirm=document.getElementById('confirmStock');
+ let stream=null, hasDetection=false, busy=false;
+ const say=(message)=>{status.textContent=message;};
+ const safe=(s)=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ function stopCamera(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}video.pause();video.srcObject=null;capture.disabled=true;stop.disabled=true;start.disabled=false;}
+ start.addEventListener('click',async()=>{
+   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){say('This browser does not support camera access. Open the app on localhost or HTTPS in a modern browser.');return;}
+   start.disabled=true; say('Requesting camera access…');
+   try{
+     stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});
+     video.srcObject=stream;
+     await new Promise((resolve,reject)=>{
+       if(video.readyState>=HTMLMediaElement.HAVE_METADATA&&video.videoWidth){resolve();return;}
+       const timer=setTimeout(()=>reject(new Error('The camera opened but no video frame arrived. Close other camera apps and try again.')),10000);
+       video.addEventListener('loadedmetadata',()=>{clearTimeout(timer);resolve();},{once:true});
+       video.addEventListener('error',()=>{clearTimeout(timer);reject(new Error('The browser could not read the camera stream.'));},{once:true});
+     });
+     await video.play();
+     if(!video.videoWidth||!video.videoHeight)throw new Error('The camera opened, but its video dimensions are not ready yet. Try again.');
+     capture.disabled=false;stop.disabled=false;say('Camera ready. Keep the objects visible and tap Capture & detect.');
+   }catch(e){stopCamera();say(e.message||'Camera access failed. Check permissions and use localhost or HTTPS.');}
+ });
+ stop.addEventListener('click',()=>{stopCamera();say('Camera stopped.');});
+ capture.addEventListener('click',async()=>{
+   if(busy)return;
+   if(!stream||video.readyState<HTMLMediaElement.HAVE_CURRENT_DATA||!video.videoWidth||!video.videoHeight){say('Camera is not ready. Start it again and wait for the live picture.');return;}
+   busy=true;capture.disabled=true;confirm.disabled=true;
+   try{
+     canvas.width=video.videoWidth;canvas.height=video.videoHeight;
+     const ctx=canvas.getContext('2d',{willReadFrequently:false});
+     ctx.drawImage(video,0,0,canvas.width,canvas.height);
+     const image=canvas.toDataURL('image/jpeg',0.92);
+     if(image.length<5000)throw new Error('The captured frame is blank or too small. Point the camera at the products and try again.');
+     say('Image captured. Running YOLO object detection…');results.textContent='Processing captured image…';
+     const res=await fetch('{{ url_for("scan_detect") }}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image})});
+     let data;try{data=await res.json();}catch(_){throw new Error('The server returned an unreadable response. Check the Flask terminal.');}
+     if(!res.ok||!data.ok)throw new Error(data.error||'Detection failed. Check the Flask terminal.');
+     const entries=Object.entries(data.counts||{});
+     results.innerHTML=entries.length?'<strong>Detected objects</strong><ul>'+entries.map(([k,v])=>'<li>'+safe(k)+': '+Number(v)+'</li>').join('')+'</ul><p>'+safe(data.notice||'Review the detected objects before updating inventory.')+'</p>':'No supported objects were detected in this frame. Try better lighting, move the camera closer, keep objects separated, and capture again.';
+     hasDetection=entries.length>0;confirm.disabled=!hasDetection;
+     say(entries.length?'Detection complete. Choose the matching catalogue product and confirm the quantity.':'Detection ran, but no supported objects were found. This pretrained model recognizes common COCO classes (for example bottles, cups, books and some packaged containers), not every retail product or brand.');
+   }catch(e){results.textContent=e.message||'Detection did not complete.';say('Detection did not complete. See the message beside the results and check the Flask terminal.');confirm.disabled=true;}
+   finally{busy=false;capture.disabled=!stream;}
+ });
+ confirm.addEventListener('click',async()=>{
+   const pid=document.getElementById('scanProduct').value,qty=Number(document.getElementById('scanQuantity').value);
+   if(!pid||!Number.isInteger(qty)||qty<1||qty>10000){say('Choose a catalogue product and enter a whole-number quantity from 1 to 10000.');return;}
+   confirm.disabled=true;
+   try{const r=await fetch('{{ url_for("scan_confirm") }}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product_id:pid,quantity:qty})});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||'Could not update stock.');say(d.message+' New stock: '+d.current_stock+'.');}
+   catch(e){say(e.message||'Stock could not be updated.');confirm.disabled=!hasDetection;}
+ });
+ window.addEventListener('pagehide',stopCamera);
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,3 @@
+# Optional standalone list for camera detection if you do not want to reinstall core dependencies.
+opencv-python>=4.8
+ultralytics>=8.2
