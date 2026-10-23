@@ -51,3 +51,6 @@ Product settings CSV required columns: `product_id, current_stock, incoming_stoc
 4. The first detection run may need an internet connection to download the pretrained `yolov8n.pt` weights.
 
 The default pretrained model recognizes common COCO object categories; it does not identify every retail package, SKU, or brand. Review detections and map them to a catalogue product before adding stock. If detection fails, the result panel now shows the actual setup/model error instead of hiding it.
+# NexoraQuantix
+Team of four collaborating for Quantix 26' Hackathon
+>>>>>>> 5dba64d8695ab94bc75baf5f928752c454de1bbf
