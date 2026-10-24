@@ -35,7 +35,38 @@ else D[lang] = {...(SERVER_TRANSLATIONS[lang]||{}), ...(EXTRA_TRANSLATIONS[lang]
 const dict=D[lang]; if(!dict)return;
 const pairs=Object.entries(dict).sort((a,b)=>b[0].length-a[0].length);
 function translateString(s){const brand='__SS_BRAND__';let out=String(s).replace(/StockSense/g,brand); for(const [en,tr] of pairs){if(out.includes(en))out=out.split(en).join(tr)}return out.split(brand).join('StockSense')}
-function walk(node){if(node.nodeType===Node.TEXT_NODE){const s=node.nodeValue;if(s&&s.trim())node.nodeValue=translateString(s)}else if(node.nodeType===Node.ELEMENT_NODE){if(node.matches('script,style,path,use'))return;for(const attr of ['placeholder','title','aria-label','alt']){if(node.hasAttribute(attr))node.setAttribute(attr,translateString(node.getAttribute(attr)))}for(const child of node.childNodes)walk(child)}}
+
+function walk(node) {
+  if (node.nodeType === Node.TEXT_NODE) {
+    const s = node.nodeValue;
+
+    if (s && s.trim()) {
+      const translated = translateString(s);
+
+      // Avoid repeatedly triggering the MutationObserver.
+      if (translated !== s) {
+        node.nodeValue = translated;
+      }
+    }
+  } else if (node.nodeType === Node.ELEMENT_NODE) {
+    if (node.matches('script,style,path,use')) return;
+
+    for (const attr of ['placeholder', 'title', 'aria-label', 'alt']) {
+      if (node.hasAttribute(attr)) {
+        const original = node.getAttribute(attr);
+        const translated = translateString(original);
+
+        if (translated !== original) {
+          node.setAttribute(attr, translated);
+        }
+      }
+    }
+
+    for (const child of node.childNodes) {
+      walk(child);
+    }
+  }
+}
 function run(){walk(document.body)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
 new MutationObserver(ms=>ms.forEach(m=>{if(m.type==='childList')m.addedNodes.forEach(walk);else if(m.type==='characterData')walk(m.target)})).observe(document.documentElement,{subtree:true,childList:true,characterData:true});
